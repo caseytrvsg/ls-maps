@@ -203,24 +203,133 @@ html, body { overscroll-behavior: none; }
   text-shadow: 2px 2px 0 #000;
 }
 
-.search-wrap { position: relative; flex: 1 1 auto; min-width: 0; }
+/* ---------- Bottom sheet (Waze-style) ---------- */
+.sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 22;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-bottom: none;
+  border-radius: 22px 22px 0 0;
+  box-shadow: 0 -8px 28px rgba(0, 0, 0, 0.55);
+  padding: 6px 16px calc(12px + env(safe-area-inset-bottom));
+  height: 216px;
+  overflow: hidden;
+  transition: height 0.25s ease;
+}
+.sheet.open { height: 68vh; overflow-y: auto; }
+.sheet-handle { display: flex; justify-content: center; padding: 5px 0 9px; cursor: pointer; }
+.sheet-handle span { width: 44px; height: 4px; border-radius: 2px; background: #4A5056; }
 
 #search {
   width: 100%;
-  padding: 13px 14px;
-  background: var(--panel);
+  padding: 13px 16px;
+  background: rgba(255, 255, 255, 0.08);
   border: 1px solid var(--panel-border);
-  border-radius: 10px;
+  border-radius: 12px;
   color: var(--text);
   font-family: var(--hud-font);
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 1px;
-  box-shadow: var(--shadow);
   outline: none;
 }
 #search::placeholder { color: #7C838A; letter-spacing: 2px; }
 #search:focus { border-color: var(--purple); }
+
+.chips { display: flex; gap: 8px; margin-top: 10px; overflow-x: auto; scrollbar-width: none; }
+.chips::-webkit-scrollbar { display: none; }
+.chip {
+  flex: 0 0 auto;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--panel-border);
+  color: var(--text);
+  font-family: var(--hud-font);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.chip:active { background: rgba(169, 77, 240, 0.25); }
+
+.recents-label {
+  margin-top: 14px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 2.5px;
+  color: var(--text-dim);
+}
+.sheet-results { margin-top: 4px; }
+
+/* ---------- Free-drive HUD ---------- */
+.speed-bubble {
+  position: absolute;
+  left: 12px;
+  bottom: calc(232px + env(safe-area-inset-bottom));
+  z-index: 21;
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  background: var(--panel);
+  border: 2px solid var(--panel-border);
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+#speed-val { font-size: 20px; font-weight: 800; color: var(--text); line-height: 1; }
+.speed-unit { font-size: 9px; font-weight: 700; letter-spacing: 1.5px; color: var(--text-dim); margin-top: 2px; }
+
+.street-pill {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(232px + env(safe-area-inset-bottom));
+  z-index: 21;
+  max-width: 55vw;
+  padding: 10px 20px;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 999px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: var(--shadow);
+}
+body.nav-on .street-pill { bottom: calc(98px + env(safe-area-inset-bottom)); }
+
+.report-fab {
+  position: absolute;
+  right: 12px;
+  bottom: calc(232px + env(safe-area-inset-bottom));
+  z-index: 21;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: #F4B63F;
+  border: 3px solid #17191C;
+  color: #17191C;
+  font-size: 24px;
+  font-weight: 800;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+}
+.report-fab:active { transform: scale(0.92); }
+
+body.nav-on .sheet,
+body.nav-on .speed-bubble,
+body.nav-on .hud-top { display: none; }
 
 .search-results {
   position: absolute;
@@ -250,7 +359,7 @@ html, body { overscroll-behavior: none; }
 /* ---------- Turn banner ---------- */
 .turn-banner {
   position: absolute;
-  top: calc(72px + env(safe-area-inset-top));
+  top: calc(12px + env(safe-area-inset-top));
   left: 12px;
   right: 12px;
   display: flex;
@@ -294,7 +403,7 @@ html, body { overscroll-behavior: none; }
 /* ---------- Proximity alerts ---------- */
 .alert-banner {
   position: absolute;
-  top: calc(150px + env(safe-area-inset-top));
+  top: calc(96px + env(safe-area-inset-top));
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -368,8 +477,9 @@ html, body { overscroll-behavior: none; }
   cursor: pointer;
 }
 
-/* ---------- Hint ---------- */
-.hint {
+/* ---------- Hint (retired — the sheet is the entry point now) ---------- */
+.hint { display: none !important; }
+.hint-unused {
   position: absolute;
   bottom: calc(26px + env(safe-area-inset-bottom));
   left: 50%;
@@ -396,8 +506,8 @@ html, body { overscroll-behavior: none; }
 /* ---------- Side buttons ---------- */
 .hud-side {
   position: absolute;
-  right: 12px;
-  bottom: calc(120px + env(safe-area-inset-bottom));
+  right: 14px;
+  bottom: calc(306px + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -686,8 +796,19 @@ html, body { overscroll-behavior: none; }
 }
 .maplibregl-ctrl-attrib a { color: #9aa1a8; }
 
+body.nav-on .hud-side { bottom: calc(120px + env(safe-area-inset-bottom)); }
+body.nav-on .report-fab { bottom: calc(120px + env(safe-area-inset-bottom)); right: 76px; }
+
 @media (max-width: 420px) {
   .logo-ls, .logo-maps { font-size: 21px; }
   .turn-arrow { font-size: 32px; }
   .turn-dist { font-size: 18px; }
+}
+
+/* Desktop: narrow sheet on the left (Waze web style), promo bar tucked top-right */
+@media (pointer: fine) and (min-width: 900px) {
+  .sheet { left: 12px; right: auto; width: 400px; border-radius: 22px; bottom: 12px; border-bottom: 1px solid var(--panel-border); }
+  .speed-bubble { left: 430px; }
+  .pc-bar { left: auto; right: 12px; top: calc(10px + env(safe-area-inset-top)); bottom: auto; width: auto; }
+  .pc-bar-logo, .pc-bar-text { display: none; }
 }

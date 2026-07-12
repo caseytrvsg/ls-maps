@@ -12,7 +12,7 @@
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icon-180.png">
   <link rel="stylesheet" href="vendor/maplibre-gl.css">
-  <link rel="stylesheet" href="css/app.css?v=5">
+  <link rel="stylesheet" href="css/app.css?v=6">
 </head>
 <body>
   <div id="map"></div>
@@ -36,14 +36,32 @@
     </div>
   </div>
 
-  <!-- Top HUD: logo + search -->
+  <!-- Top HUD: logo chip -->
   <header class="hud-top">
     <div class="logo" aria-hidden="true"><span class="logo-ls">LS</span><span class="logo-maps">MAPS</span></div>
-    <div class="search-wrap">
-      <input id="search" type="text" autocomplete="off" spellcheck="false" placeholder="SEARCH DESTINATION" aria-label="Search destination">
-      <div id="search-results" class="search-results hidden"></div>
-    </div>
   </header>
+
+  <!-- Waze-style bottom sheet: search, shortcuts, recents -->
+  <div id="sheet" class="sheet">
+    <div id="sheet-handle" class="sheet-handle" aria-hidden="true"><span></span></div>
+    <div class="sheet-search">
+      <input id="search" type="text" autocomplete="off" spellcheck="false" placeholder="WHERE TO?" aria-label="Where to?">
+    </div>
+    <div class="chips">
+      <button class="chip" id="chip-home">&#127968; SET HOME</button>
+      <button class="chip" id="chip-work">&#128188; SET WORK</button>
+    </div>
+    <div id="recents-label" class="recents-label hidden">RECENT</div>
+    <div id="search-results" class="sheet-results"></div>
+  </div>
+
+  <!-- Free-drive HUD: speed bubble, current street, report FAB -->
+  <div id="speed-bubble" class="speed-bubble hidden">
+    <div id="speed-val">0</div>
+    <div class="speed-unit">MPH</div>
+  </div>
+  <div id="street-pill" class="street-pill hidden"></div>
+  <button id="btn-report" class="report-fab" title="Report police" aria-label="Report police">&#9888;</button>
 
   <!-- Turn-by-turn banner (hidden until navigating) -->
   <div id="turn-banner" class="turn-banner hidden">
@@ -74,7 +92,6 @@
 
   <!-- Right-side buttons -->
   <div class="hud-side">
-    <button id="btn-report" class="side-btn btn-report" title="Report police" aria-label="Report police">&#128110;</button>
     <button id="btn-voice" class="side-btn" title="Voice guidance" aria-label="Toggle voice guidance">&#128266;</button>
     <button id="btn-north" class="side-btn" title="Face north" aria-label="Face north">N</button>
     <button id="btn-recenter" class="side-btn" title="Recenter" aria-label="Recenter on my position">&#9678;</button>
@@ -152,6 +169,6 @@
   <script src="vendor/maplibre-gl.js"></script>
   <script src="vendor/qrcode.js"></script>
   <script src="js/gta-style.js?v=5"></script>
-  <script src="js/app.js?v=5"></script>
+  <script src="js/app.js?v=6"></script>
 </body>
 </html>

@@ -535,6 +535,8 @@
     if (!waypointMarker) waypointMarker = makeWaypointMarker();
     waypointMarker.setLngLat(waypointLngLat).addTo(map);
     $("to-input").value = label || "DROPPED PIN";
+    saveRecent(label, waypointLngLat);
+    hideSheet();
     $("hint").classList.add("hidden");
     $("pc-bar").classList.add("hidden"); // promo bar yields to the route panel
     speak("Waypoint set.");
@@ -613,6 +615,8 @@
     $("dir-results").classList.add("hidden");
     setRouteGeometry([]);
     $("route-panel").classList.add("hidden");
+    openSheet(false);
+    renderRecents();
   }
 
   // ---------------- From/To pickers (route panel) ----------------
@@ -684,6 +688,8 @@
     arrived = false;
     demoActive = !!demo;
     following = true;
+    document.body.classList.add("nav-on");
+    $("speed-bubble").classList.add("hidden");
     $("route-panel").classList.add("hidden");
     $("nav-bar").classList.remove("hidden");
     $("turn-banner").classList.remove("hidden");
@@ -705,6 +711,7 @@
   function stopNav(silent) {
     navActive = false;
     demoActive = false;
+    document.body.classList.remove("nav-on");
     if (demoRaf) { cancelAnimationFrame(demoRaf); demoRaf = null; }
     $("nav-bar").classList.add("hidden");
     $("turn-banner").classList.add("hidden");
@@ -740,6 +747,7 @@
     var heading = bearingDeg(coords[i], coords[i + 1]);
     updateNavigation(pos, heading, DEMO_SPEED_MPS, demoTraveled);
     checkAlerts(pos, heading);
+    maybeStreetName(pos);
     if (demoTraveled < total) demoRaf = requestAnimationFrame(demoTick);
   }
 
@@ -881,7 +889,10 @@
       if (navActive && !demoActive) {
         updateNavigation(pos, playerHeading, playerSpeedMps);
       }
-      if (!demoActive) checkAlerts(pos, playerHeading);
+      if (!demoActive) {
+        checkAlerts(pos, playerHeading);
+        updateFreeDriveHud(pos, playerSpeedMps);
+      }
     }, function (err) {
       if (!hasGpsFix) toast("GPS UNAVAILABLE — TAP MAP + DEMO DRIVE STILL WORK", true);
     }, { enableHighAccuracy: true, maximumAge: 1000, timeout: 15000 });
@@ -899,12 +910,109 @@
     if (document.visibilityState === "visible" && navActive) acquireWakeLock();
   });
 
-  // ---------------- Search (Nominatim) ----------------
+  // ---------------- Bottom sheet: search, recents, saved places ----------------
   var searchTimer = null;
+  var chipAssign = null; // 'home' | 'work' while picking a place for a chip
+
+  function loadJson(key, fallback) {
+    try { return JSON.parse(localStorage.getItem(key)) || fallback; } catch (e) { return fallback; }
+  }
+
+  function getRecents() { return loadJson("lsmaps-recents", []); }
+
+  function saveRecent(label, lngLat) {
+    if (!label || label === "DROPPED PIN" || label === "MY LOCATION" || label === "PINNED START") return;
+    var rec = getRecents().filter(function (r) { return r.label !== label; });
+    rec.unshift({ label: label, lng: lngLat[0], lat: lngLat[1] });
+    try { localStorage.setItem("lsmaps-recents", JSON.stringify(rec.slice(0, 6))); } catch (e) {}
+  }
+
+  function getPlaces() { return loadJson("lsmaps-places", {}); }
+
+  function savePlace(slot, label, lngLat) {
+    var p = getPlaces();
+    p[slot] = { label: label, lng: lngLat[0], lat: lngLat[1] };
+    try { localStorage.setItem("lsmaps-places", JSON.stringify(p)); } catch (e) {}
+    refreshChips();
+  }
+
+  function refreshChips() {
+    var p = getPlaces();
+    $("chip-home").innerHTML = "&#127968; " + (p.home ? "HOME" : "SET HOME");
+    $("chip-work").innerHTML = "&#128188; " + (p.work ? "WORK" : "SET WORK");
+  }
+
+  function openSheet(expand) {
+    $("sheet").classList.remove("hidden");
+    if (expand) $("sheet").classList.add("open");
+  }
+  function collapseSheet() {
+    $("sheet").classList.remove("open");
+    $("search").blur();
+  }
+  function hideSheet() {
+    collapseSheet();
+    $("sheet").classList.add("hidden");
+  }
+
+  function sheetRow(icon, primary, secondary, onClick) {
+    var div = document.createElement("div");
+    div.className = "search-item";
+    div.innerHTML = '<div class="primary">' + icon + " " + escapeHtml(primary) + "</div>" +
+      (secondary ? '<div class="secondary">' + escapeHtml(secondary) + "</div>" : "");
+    div.addEventListener("click", onClick);
+    return div;
+  }
+
+  function renderRecents() {
+    var box = $("search-results");
+    box.innerHTML = "";
+    var rec = getRecents();
+    $("recents-label").classList.toggle("hidden", !rec.length);
+    rec.forEach(function (r) {
+      box.appendChild(sheetRow("&#128337;", r.label, null, function () {
+        pickDestination([r.lng, r.lat], r.label);
+      }));
+    });
+  }
+
+  function pickDestination(lngLat, label) {
+    if (chipAssign) {
+      savePlace(chipAssign, label, lngLat);
+      toast((chipAssign === "home" ? "HOME" : "WORK") + " SAVED — TAP THE CHIP TO GO", true);
+      chipAssign = null;
+      $("search").value = "";
+      $("search").placeholder = "WHERE TO?";
+      renderRecents();
+      return;
+    }
+    $("search").value = "";
+    map.easeTo({ center: lngLat, zoom: 14, duration: 700 });
+    setWaypoint(lngLat, label);
+  }
+
+  function chipTap(slot) {
+    var p = getPlaces()[slot];
+    if (p && !chipAssign) { pickDestination([p.lng, p.lat], p.label); return; }
+    chipAssign = slot;
+    $("search").placeholder = "SEARCH A PLACE TO SET " + slot.toUpperCase();
+    openSheet(true);
+    $("search").focus();
+  }
+
+  function chipReassign(slot) {
+    chipAssign = slot;
+    $("search").placeholder = "SEARCH A NEW PLACE FOR " + slot.toUpperCase();
+    openSheet(true);
+    $("search").focus();
+    toast("PICK THE NEW " + slot.toUpperCase() + " FROM SEARCH", true);
+  }
+
   function onSearchInput() {
     var q = $("search").value.trim();
     clearTimeout(searchTimer);
-    if (q.length < 3) { $("search-results").classList.add("hidden"); return; }
+    if (q.length) openSheet(true);
+    if (q.length < 3) { renderRecents(); return; }
     searchTimer = setTimeout(function () {
       var center = map.getCenter();
       var url = NOMINATIM_URL + "?format=jsonv2&limit=5&q=" + encodeURIComponent(q) +
@@ -914,27 +1022,46 @@
         .then(function (items) {
           var box = $("search-results");
           box.innerHTML = "";
-          if (!items.length) { box.classList.add("hidden"); return; }
+          $("recents-label").classList.add("hidden");
           items.forEach(function (it) {
-            var div = document.createElement("div");
-            div.className = "search-item";
             var parts = (it.display_name || "").split(",");
-            div.innerHTML = '<div class="primary">' + escapeHtml(parts[0] || it.name || "?") + "</div>" +
-              '<div class="secondary">' + escapeHtml(parts.slice(1, 4).join(",").trim()) + "</div>";
-            div.addEventListener("click", function () {
-              box.classList.add("hidden");
-              $("search").value = parts[0] || "";
-              $("search").blur();
-              var lngLat = [parseFloat(it.lon), parseFloat(it.lat)];
-              map.easeTo({ center: lngLat, zoom: 14, duration: 700 });
-              setWaypoint(lngLat, parts[0]);
-            });
-            box.appendChild(div);
+            box.appendChild(sheetRow("&#128205;", parts[0] || it.name || "?", parts.slice(1, 4).join(",").trim(), function () {
+              pickDestination([parseFloat(it.lon), parseFloat(it.lat)], parts[0]);
+            }));
           });
-          box.classList.remove("hidden");
         })
         .catch(function () { toast("SEARCH UNAVAILABLE RIGHT NOW"); });
     }, 450);
+  }
+
+  // ---------------- Free-drive HUD: speed bubble + current street ----------------
+  var streetFetchAt = 0, streetFetchPos = null;
+
+  function maybeStreetName(pos) {
+    var now = Date.now();
+    if (now - streetFetchAt < 30000) return;
+    if (streetFetchPos && haversine(pos, streetFetchPos) < 80) return;
+    streetFetchAt = now;
+    streetFetchPos = pos.slice();
+    fetch("https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=17&lat=" + pos[1] + "&lon=" + pos[0],
+      { headers: { Accept: "application/json" } })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        var road = d.address && (d.address.road || d.address.pedestrian || d.address.neighbourhood);
+        if (road) {
+          $("street-pill").textContent = road.toUpperCase();
+          $("street-pill").classList.remove("hidden");
+        }
+      })
+      .catch(function () {});
+  }
+
+  function updateFreeDriveHud(pos, speedMps) {
+    if (!navActive) {
+      $("speed-val").textContent = Math.round((speedMps || 0) * 2.23694);
+      $("speed-bubble").classList.remove("hidden");
+    }
+    maybeStreetName(pos);
   }
 
   function escapeHtml(s) {
@@ -1060,8 +1187,9 @@
 
     map.on("click", function (e) {
       // taps on HUD elements never reach the map, so this is a genuine map tap
-      if ($("search-results") && !$("search-results").classList.contains("hidden")) {
-        $("search-results").classList.add("hidden");
+      if ($("sheet").classList.contains("open")) {
+        collapseSheet();
+        renderRecents();
         return;
       }
       setWaypoint(e.lngLat);
@@ -1091,6 +1219,18 @@
       if (!voiceOn && window.speechSynthesis) window.speechSynthesis.cancel();
     });
     $("search").addEventListener("input", onSearchInput);
+    $("search").addEventListener("focus", function () { openSheet(true); });
+    $("search").addEventListener("pointerdown", function () { openSheet(true); });
+    $("sheet-handle").addEventListener("click", function () {
+      $("sheet").classList.toggle("open");
+    });
+    ["home", "work"].forEach(function (slot) {
+      var chip = $("chip-" + slot);
+      chip.addEventListener("click", function () { chipTap(slot); });
+      chip.addEventListener("contextmenu", function (e) { e.preventDefault(); chipReassign(slot); });
+    });
+    refreshChips();
+    renderRecents();
 
     attachDirSearch("from-input", true);
     attachDirSearch("to-input", false);
