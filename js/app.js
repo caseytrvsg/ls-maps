@@ -144,18 +144,15 @@
     var shapes =
       '<rect x="15.5" y="3" width="13" height="38" rx="6.5"/>' +
       '<rect x="3" y="15.5" width="38" height="13" rx="6.5"/>' +
-      '<circle cx="22" cy="22" r="10.5"/>';
+      '<circle cx="22" cy="22" r="8.5"/>';
     var el = document.createElement("div");
     el.className = "waypoint-marker";
     el.innerHTML =
       '<div class="waypoint-pulse"></div>' +
       '<svg class="waypoint-blip" viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg">' +
-      '<defs><mask id="wpHole"><rect width="44" height="44" fill="#fff"/><circle cx="22" cy="22" r="8" fill="#000"/></mask></defs>' +
-      '<g mask="url(#wpHole)">' +
       '<g fill="#8F3FE0" stroke="#17191C" stroke-width="3">' + shapes + "</g>" +
       '<g fill="#8F3FE0">' + shapes + "</g>" +
-      "</g>" +
-      '<circle cx="22" cy="22" r="8" fill="none" stroke="#17191C" stroke-width="2.2"/>' +
+      '<circle cx="22" cy="22" r="3.4" fill="#2A1740"/>' +
       "</svg>";
     return new maplibregl.Marker({ element: el, anchor: "center" });
   }
