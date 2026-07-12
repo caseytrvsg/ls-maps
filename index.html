@@ -12,7 +12,7 @@
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icon-180.png">
   <link rel="stylesheet" href="vendor/maplibre-gl.css">
-  <link rel="stylesheet" href="css/app.css?v=4">
+  <link rel="stylesheet" href="css/app.css?v=5">
 </head>
 <body>
   <div id="map"></div>
@@ -82,6 +82,18 @@
 
   <!-- Route summary panel (appears after waypoint is set) -->
   <div id="route-panel" class="route-panel hidden">
+    <div class="dir-rows">
+      <div class="dir-row">
+        <span class="dir-dot dir-dot-from" aria-hidden="true"></span>
+        <input id="from-input" type="text" autocomplete="off" spellcheck="false" placeholder="YOUR LOCATION" aria-label="Starting point">
+      </div>
+      <div class="dir-row">
+        <span class="dir-dot dir-dot-to" aria-hidden="true"></span>
+        <input id="to-input" type="text" autocomplete="off" spellcheck="false" placeholder="CHOOSE DESTINATION" aria-label="Destination">
+      </div>
+      <button id="btn-swap" class="btn-swap" title="Swap start and destination" aria-label="Swap start and destination">&#8645;</button>
+      <div id="dir-results" class="search-results dir-results hidden"></div>
+    </div>
     <div class="route-stats">
       <span id="route-time" class="route-time">--</span>
       <span id="route-dist" class="route-dist">--</span>
@@ -139,7 +151,7 @@
   </script>
   <script src="vendor/maplibre-gl.js"></script>
   <script src="vendor/qrcode.js"></script>
-  <script src="js/gta-style.js?v=4"></script>
-  <script src="js/app.js?v=4"></script>
+  <script src="js/gta-style.js?v=5"></script>
+  <script src="js/app.js?v=5"></script>
 </body>
 </html>

@@ -29,6 +29,8 @@
 
   var route = null;            // { coords, cum, totalDist, totalDur, steps }
   var waypointLngLat = null;
+  var customOrigin = null;     // [lng, lat] when start ≠ your location
+  var originMarker = null;
   var navActive = false;
   var demoActive = false;
   var demoTraveled = 0;
@@ -526,20 +528,56 @@
   }
 
   // ---------------- Waypoint / route setup ----------------
-  function setWaypoint(lngLat) {
+  function setWaypoint(lngLat, label) {
     if (navActive) return; // don't re-target mid-drive; END first
     waypointLngLat = [lngLat.lng !== undefined ? lngLat.lng : lngLat[0],
                       lngLat.lat !== undefined ? lngLat.lat : lngLat[1]];
     if (!waypointMarker) waypointMarker = makeWaypointMarker();
     waypointMarker.setLngLat(waypointLngLat).addTo(map);
+    $("to-input").value = label || "DROPPED PIN";
     $("hint").classList.add("hidden");
     $("pc-bar").classList.add("hidden"); // promo bar yields to the route panel
     speak("Waypoint set.");
     requestRoute();
   }
 
+  function resolveOrigin() {
+    return customOrigin || playerPos || map.getCenter().toArray();
+  }
+
+  function setCustomOrigin(pos, label) {
+    customOrigin = pos;
+    $("from-input").value = pos ? (label || "PINNED START") : "";
+    if (pos) {
+      if (!originMarker) {
+        var el = document.createElement("div");
+        el.className = "origin-marker";
+        originMarker = new maplibregl.Marker({ element: el });
+      }
+      originMarker.setLngLat(pos).addTo(map);
+    } else if (originMarker) {
+      originMarker.remove();
+      originMarker = null;
+    }
+    if (waypointLngLat) requestRoute();
+  }
+
+  function swapEnds() {
+    if (!waypointLngLat) { toast("SET A DESTINATION FIRST", true); return; }
+    if (navActive) return;
+    var newDest = resolveOrigin().slice();
+    var newDestLabel = customOrigin ? ($("from-input").value || "PINNED START") : "MY LOCATION";
+    var newOrigin = waypointLngLat.slice();
+    var newOriginLabel = $("to-input").value || "DROPPED PIN";
+    waypointLngLat = newDest;
+    waypointMarker.setLngLat(newDest);
+    $("to-input").value = newDestLabel;
+    setCustomOrigin(newOrigin, newOriginLabel); // updates marker + refetches once
+  }
+
   function requestRoute() {
-    var origin = playerPos || map.getCenter().toArray();
+    // mid-drive recalculations always start from where the car actually is
+    var origin = (navActive && !demoActive && playerPos) ? playerPos : resolveOrigin();
     rerouting = true;
     fetchRoute(origin, waypointLngLat, function (err, r) {
       rerouting = false;
@@ -568,8 +606,71 @@
     route = null;
     waypointLngLat = null;
     if (waypointMarker) { waypointMarker.remove(); waypointMarker = null; }
+    customOrigin = null;
+    if (originMarker) { originMarker.remove(); originMarker = null; }
+    $("from-input").value = "";
+    $("to-input").value = "";
+    $("dir-results").classList.add("hidden");
     setRouteGeometry([]);
     $("route-panel").classList.add("hidden");
+  }
+
+  // ---------------- From/To pickers (route panel) ----------------
+  function dirSearch(q, isFrom) {
+    var box = $("dir-results");
+    box.innerHTML = "";
+    if (isFrom) {
+      var mine = document.createElement("div");
+      mine.className = "search-item";
+      mine.innerHTML = '<div class="primary">◉ YOUR LOCATION</div><div class="secondary">Follow GPS</div>';
+      mine.addEventListener("click", function () {
+        box.classList.add("hidden");
+        setCustomOrigin(null);
+      });
+      box.appendChild(mine);
+    }
+    if (q.length >= 3) {
+      var center = map.getCenter();
+      var url = NOMINATIM_URL + "?format=jsonv2&limit=5&q=" + encodeURIComponent(q) +
+        "&viewbox=" + (center.lng - 1) + "," + (center.lat + 1) + "," + (center.lng + 1) + "," + (center.lat - 1) + "&bounded=0";
+      fetch(url, { headers: { Accept: "application/json" } })
+        .then(function (r) { return r.json(); })
+        .then(function (items) {
+          items.forEach(function (it) {
+            var parts = (it.display_name || "").split(",");
+            var div = document.createElement("div");
+            div.className = "search-item";
+            div.innerHTML = '<div class="primary">' + escapeHtml(parts[0] || "?") + "</div>" +
+              '<div class="secondary">' + escapeHtml(parts.slice(1, 4).join(",").trim()) + "</div>";
+            div.addEventListener("click", function () {
+              box.classList.add("hidden");
+              var lngLat = [parseFloat(it.lon), parseFloat(it.lat)];
+              if (isFrom) {
+                setCustomOrigin(lngLat, parts[0]);
+              } else {
+                map.easeTo({ center: lngLat, zoom: 14, duration: 700 });
+                setWaypoint(lngLat, parts[0]);
+              }
+            });
+            box.appendChild(div);
+          });
+          if (box.children.length) box.classList.remove("hidden");
+        })
+        .catch(function () {});
+    }
+    box.classList.toggle("hidden", !box.children.length);
+  }
+
+  function attachDirSearch(inputId, isFrom) {
+    var input = $(inputId), timer = null;
+    input.addEventListener("focus", function () {
+      input.select();
+      if (isFrom) dirSearch(input.value.trim(), true);
+    });
+    input.addEventListener("input", function () {
+      clearTimeout(timer);
+      timer = setTimeout(function () { dirSearch(input.value.trim(), isFrom); }, 450);
+    });
   }
 
   // ---------------- Navigation ----------------
@@ -826,7 +927,7 @@
               $("search").blur();
               var lngLat = [parseFloat(it.lon), parseFloat(it.lat)];
               map.easeTo({ center: lngLat, zoom: 14, duration: 700 });
-              setWaypoint(lngLat);
+              setWaypoint(lngLat, parts[0]);
             });
             box.appendChild(div);
           });
@@ -990,6 +1091,10 @@
       if (!voiceOn && window.speechSynthesis) window.speechSynthesis.cancel();
     });
     $("search").addEventListener("input", onSearchInput);
+
+    attachDirSearch("from-input", true);
+    attachDirSearch("to-input", false);
+    $("btn-swap").addEventListener("click", swapEnds);
 
     $("btn-report").addEventListener("click", function () {
       $("report-sheet").classList.toggle("hidden");
