@@ -202,8 +202,8 @@ window.GTA_STYLE = {
       ],
       layout: { "line-cap": "round", "line-join": "round" },
       paint: {
-        "line-color": "#141619",
-        "line-width": ["interpolate", ["exponential", 1.4], ["zoom"], 5, 1.6, 10, 4, 14, 9, 17, 16, 19, 34]
+        "line-color": "#1A150C",
+        "line-width": ["interpolate", ["exponential", 1.4], ["zoom"], 5, 2, 10, 4.8, 14, 10.5, 17, 18, 19, 38]
       }
     },
 
@@ -268,8 +268,8 @@ window.GTA_STYLE = {
       ],
       layout: { "line-cap": "round", "line-join": "round" },
       paint: {
-        "line-color": "#E4E8EB",
-        "line-width": ["interpolate", ["exponential", 1.4], ["zoom"], 7, 0.9, 12, 3, 16, 9, 19, 24]
+        "line-color": "#F0F3F5",
+        "line-width": ["interpolate", ["exponential", 1.4], ["zoom"], 7, 1, 12, 3.4, 16, 10, 19, 26]
       }
     },
     {
@@ -284,8 +284,8 @@ window.GTA_STYLE = {
       ],
       layout: { "line-cap": "round", "line-join": "round" },
       paint: {
-        "line-color": "#F2F5F7",
-        "line-width": ["interpolate", ["exponential", 1.4], ["zoom"], 5, 1, 10, 2.8, 14, 6.5, 17, 12, 19, 27]
+        "line-color": "#EFD9A0",
+        "line-width": ["interpolate", ["exponential", 1.4], ["zoom"], 5, 1.2, 10, 3.4, 14, 7.5, 17, 14, 19, 30]
       }
     },
 

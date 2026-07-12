@@ -193,6 +193,65 @@
     });
   }
 
+  // Highway shields: a stretchable rounded-rect badge (dark outline, white
+  // ring, colored fill) that icon-text-fit wraps around each road number.
+  function makeShieldImage(fill) {
+    var s = 2; // rendered at 2x for crisp edges
+    var w = 24 * s, h = 18 * s, r = 5 * s, b = 1.5 * s;
+    var c = document.createElement("canvas");
+    c.width = w; c.height = h;
+    var ctx = c.getContext("2d");
+    function rr(x, y, ww, hh, rad) {
+      ctx.beginPath();
+      ctx.moveTo(x + rad, y);
+      ctx.arcTo(x + ww, y, x + ww, y + hh, rad);
+      ctx.arcTo(x + ww, y + hh, x, y + hh, rad);
+      ctx.arcTo(x, y + hh, x, y, rad);
+      ctx.arcTo(x, y, x + ww, y, rad);
+      ctx.closePath();
+    }
+    rr(0, 0, w, h, r); ctx.fillStyle = "#17191C"; ctx.fill();
+    rr(b, b, w - 2 * b, h - 2 * b, r - b); ctx.fillStyle = "#F5F7F8"; ctx.fill();
+    rr(2 * b, 2 * b, w - 4 * b, h - 4 * b, r - 2 * b); ctx.fillStyle = fill; ctx.fill();
+    return { img: ctx.getImageData(0, 0, w, h), meta: {
+      pixelRatio: s,
+      content: [12, 10, 36, 26],
+      stretchX: [[16, 32]],
+      stretchY: [[14, 22]]
+    } };
+  }
+
+  function addRoadShields() {
+    var motorway = makeShieldImage("#3A66A8"); // blue — motorways
+    var aroad = makeShieldImage("#37714E");    // green — trunk/primary
+    map.addImage("shield-motorway", motorway.img, motorway.meta);
+    map.addImage("shield-aroad", aroad.img, aroad.meta);
+    map.addLayer({
+      id: "road-shield",
+      type: "symbol",
+      source: "omt",
+      "source-layer": "transportation_name",
+      minzoom: 8,
+      filter: ["all",
+        ["has", "ref"],
+        ["in", ["get", "class"], ["literal", ["motorway", "trunk", "primary"]]]
+      ],
+      layout: {
+        "symbol-placement": "line",
+        "symbol-spacing": 400,
+        "text-field": ["get", "ref"],
+        "text-font": ["Noto Sans Bold"],
+        "text-size": 10.5,
+        "icon-image": ["match", ["get", "class"], "motorway", "shield-motorway", "shield-aroad"],
+        "icon-text-fit": "both",
+        "icon-text-fit-padding": [3, 7, 3, 7],
+        "icon-rotation-alignment": "viewport",
+        "text-rotation-alignment": "viewport"
+      },
+      paint: { "text-color": "#FFFFFF" }
+    });
+  }
+
   function emptyLine() {
     return { type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: [] } };
   }
@@ -684,6 +743,7 @@
 
     map.on("load", function () {
       addRouteLayers();
+      addRoadShields();
       startGps();
       // one-time install hint for iPhone Safari users
       var isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
