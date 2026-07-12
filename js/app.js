@@ -589,8 +589,46 @@
     });
   }
 
+  // ---------------- Mobile-only gate ----------------
+  function isStandalone() {
+    return (window.matchMedia && matchMedia("(display-mode: standalone)").matches) ||
+           window.navigator.standalone === true;
+  }
+
+  function isMobileDevice() {
+    var touch = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
+    var coarse = window.matchMedia && matchMedia("(pointer: coarse)").matches;
+    return touch && coarse;
+  }
+
+  function showGate() {
+    var gate = $("gate");
+    gate.classList.remove("hidden");
+    var url = location.origin + location.pathname;
+    $("gate-url").textContent = url.replace(/^https?:\/\//, "").replace(/\/$/, "");
+    try {
+      var qr = qrcode(0, "M");
+      qr.addData(url);
+      qr.make();
+      $("gate-qr").innerHTML = qr.createSvgTag({ cellSize: 5, margin: 0 });
+    } catch (e) {
+      $("gate-qr").classList.add("hidden");
+    }
+  }
+
   // ---------------- Init ----------------
   function init() {
+    var dev = new URLSearchParams(location.search).get("dev") === "1";
+    if (!dev && !isStandalone() && !isMobileDevice()) {
+      showGate();
+      return; // desktop: gate only, don't boot the map
+    }
+    $("gate").remove();
+
+    if ("serviceWorker" in navigator &&
+        (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
+      navigator.serviceWorker.register("sw.js").catch(function () {});
+    }
     map = new maplibregl.Map({
       container: "map",
       style: window.GTA_STYLE,
@@ -608,6 +646,12 @@
     map.on("load", function () {
       addRouteLayers();
       startGps();
+      // one-time install hint for iPhone Safari users
+      var isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+      if (isIos && !isStandalone() && !localStorage.getItem("lsmaps-install-hint")) {
+        localStorage.setItem("lsmaps-install-hint", "1");
+        setTimeout(function () { toast("INSTALL: SHARE → ADD TO HOME SCREEN", true); }, 2500);
+      }
     });
 
     map.on("click", function (e) {

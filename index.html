@@ -10,10 +10,21 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon-180.png">
   <link rel="stylesheet" href="vendor/maplibre-gl.css">
   <link rel="stylesheet" href="css/app.css">
 </head>
 <body>
+  <!-- Desktop gate: LS Maps is mobile-only -->
+  <div id="gate" class="gate hidden">
+    <div class="logo gate-logo"><span class="logo-ls">LS</span><span class="logo-maps">MAPS</span></div>
+    <div class="gate-title">MOBILE ONLY</div>
+    <div class="gate-sub">GPS navigation built for your phone.</div>
+    <div id="gate-qr" class="gate-qr"></div>
+    <div id="gate-url" class="gate-url"></div>
+    <div class="gate-hint">SCAN WITH YOUR PHONE CAMERA<br>THEN: SHARE &rarr; ADD TO HOME SCREEN</div>
+  </div>
+
   <div id="map"></div>
 
   <!-- Top HUD: logo + search -->
@@ -102,6 +113,7 @@
     }
   </script>
   <script src="vendor/maplibre-gl.js"></script>
+  <script src="vendor/qrcode.js"></script>
   <script src="js/gta-style.js"></script>
   <script src="js/app.js"></script>
 </body>

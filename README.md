@@ -39,13 +39,19 @@ roads, steel-teal water, purple route. No Rockstar assets are used or copied.
 - Voice toggle, north-up button, recenter button
 - Installable as a home-screen app (PWA manifest)
 
+## Mobile-only
+
+LS Maps is a phone app. Desktop browsers get a QR gate — scan it with your phone,
+then install via Share → Add to Home Screen (iPhone) or the install prompt (Android).
+`?dev=1` bypasses the gate for desktop testing; `?forceframes=1` unfreezes the map
+engine in embedded browsers that suspend animation frames.
+
 ## Known limits (v1)
 
 - No live traffic — that data isn't free; routes are fastest-by-road-network (OSRM)
 - OSRM demo server is community-run; if routing errors appear, try again in a minute
-- No service worker yet (deliberate — avoids the stale-cache issues ASCEND hit);
-  needs to be online
-- Icon is SVG-only; iOS home-screen icon (PNG) still to be added
+- Service worker is network-first (avoids ASCEND's stale-cache trap); the app shell
+  works offline but tiles/routing/search need a connection
 
 ## Credits
 

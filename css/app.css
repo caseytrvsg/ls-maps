@@ -30,6 +30,44 @@ html, body {
 
 .hidden { display: none !important; }
 
+button, input { touch-action: manipulation; }
+html, body { overscroll-behavior: none; }
+
+/* ---------- Desktop gate (mobile-only app) ---------- */
+.gate {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  background: #1A1D20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  text-align: center;
+  padding: 24px;
+}
+.gate-logo { transform: skewX(-4deg) scale(1.4); margin-bottom: 8px; }
+.gate-title {
+  font-family: var(--logo-font);
+  font-style: italic;
+  font-size: 34px;
+  color: var(--purple);
+  letter-spacing: 3px;
+  text-shadow: 2px 2px 0 #000;
+}
+.gate-sub { color: var(--text-dim); font-size: 14px; letter-spacing: 1px; }
+.gate-qr {
+  background: #fff;
+  padding: 12px;
+  border-radius: 12px;
+  line-height: 0;
+  box-shadow: var(--shadow);
+}
+.gate-qr svg { width: 200px; height: 200px; }
+.gate-url { color: var(--text); font-size: 14px; font-weight: 700; letter-spacing: 1px; }
+.gate-hint { color: var(--text-dim); font-size: 11px; font-weight: 700; letter-spacing: 2px; line-height: 1.8; }
+
 /* ---------- Top HUD ---------- */
 .hud-top {
   position: absolute;
