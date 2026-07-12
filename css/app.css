@@ -341,7 +341,30 @@ html, body { overscroll-behavior: none; }
   justify-content: center;
 }
 #speed-val { font-size: 20px; font-weight: 800; color: var(--text); line-height: 1; }
+#speed-val.over { color: #F0857D; }
 .speed-unit { font-size: 9px; font-weight: 700; letter-spacing: 1.5px; color: var(--text-dim); margin-top: 2px; }
+
+/* Speed-limit sign (red-ring, UK/EU style) — sits right of the speedometer */
+.limit-sign {
+  position: absolute;
+  left: 82px;
+  bottom: calc(232px + env(safe-area-inset-bottom));
+  z-index: 21;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  border: 6px solid #D23B33;
+  box-shadow: var(--shadow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#limit-val { color: #111; font-size: 20px; font-weight: 800; line-height: 1; }
+body.nav-on .limit-sign {
+  left: 12px;
+  bottom: calc(120px + env(safe-area-inset-bottom));
+}
 
 .street-pill {
   position: absolute;

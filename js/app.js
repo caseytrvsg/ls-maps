@@ -897,6 +897,7 @@
     updateNavigation(pos, heading, DEMO_SPEED_MPS, demoTraveled);
     checkAlerts(pos, heading);
     maybeStreetName(pos);
+    maybeSpeedLimit(pos);
     if (demoTraveled < total) demoRaf = requestAnimationFrame(demoTick);
   }
 
@@ -1186,8 +1187,65 @@
     }, 450);
   }
 
-  // ---------------- Free-drive HUD: speed bubble + current street ----------------
+  // ---------------- Free-drive HUD: speed bubble + current street + speed limit ----------------
   var streetFetchAt = 0, streetFetchPos = null;
+  var limitFetchAt = 0, limitFetchPos = null, currentLimitMph = null;
+
+  // OSM maxspeed tag → mph number (UK/US use mph; bare/other units converted).
+  function parseMaxspeedMph(v) {
+    if (!v) return null;
+    v = String(v).toLowerCase().trim();
+    if (v.indexOf("national") >= 0 || v.indexOf("walk") >= 0 || v.indexOf("none") >= 0 || v.indexOf("signal") >= 0) return null;
+    var mph = v.match(/(\d+)\s*mph/);
+    if (mph) return +mph[1];
+    var kmh = v.match(/(\d+)\s*km\/?h/);
+    if (kmh) return Math.round(+kmh[1] / 1.60934);
+    var bare = v.match(/^(\d+)$/);
+    if (bare) return Math.round(+bare[1] / 1.60934); // bare number is km/h by OSM convention
+    return null;
+  }
+
+  function nearestWayDist(pos, geom) {
+    var best = Infinity;
+    for (var i = 0; i < geom.length - 1; i++) {
+      var pr = projectToSegment(pos, [geom[i].lon, geom[i].lat], [geom[i + 1].lon, geom[i + 1].lat]);
+      if (pr.dist < best) best = pr.dist;
+    }
+    if (geom.length === 1) best = haversine(pos, [geom[0].lon, geom[0].lat]);
+    return best;
+  }
+
+  function setLimitSign(mph) {
+    currentLimitMph = mph;
+    var sign = $("limit-sign");
+    if (mph) { $("limit-val").textContent = mph; sign.classList.remove("hidden"); }
+    else { sign.classList.add("hidden"); }
+  }
+
+  function maybeSpeedLimit(pos) {
+    var now = Date.now();
+    if (now - limitFetchAt < 8000) return;
+    if (limitFetchPos && haversine(pos, limitFetchPos) < 45) return;
+    limitFetchAt = now;
+    limitFetchPos = pos.slice();
+    var q = "[out:json][timeout:10];way(around:40," + pos[1] + "," + pos[0] + ")[highway][maxspeed];out tags geom 20;";
+    fetch(OVERPASS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: "data=" + encodeURIComponent(q)
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        var best = null, bestD = 42;
+        (data.elements || []).forEach(function (w) {
+          if (!w.geometry || !w.tags || !w.tags.maxspeed) return;
+          var d = nearestWayDist(pos, w.geometry);
+          if (d < bestD) { bestD = d; best = w.tags.maxspeed; }
+        });
+        setLimitSign(best ? parseMaxspeedMph(best) : null);
+      })
+      .catch(function () { /* keep last known limit */ });
+  }
 
   function maybeStreetName(pos) {
     var now = Date.now();
@@ -1209,11 +1267,16 @@
   }
 
   function updateFreeDriveHud(pos, speedMps) {
+    var mph = Math.round((speedMps || 0) * 2.23694);
     if (!navActive) {
-      $("speed-val").textContent = Math.round((speedMps || 0) * 2.23694);
+      $("speed-val").textContent = mph;
       $("speed-bubble").classList.remove("hidden");
     }
+    // over-limit warning: tint the speed number red (5 mph tolerance)
+    var over = currentLimitMph && mph > currentLimitMph + 5;
+    $("speed-val").classList.toggle("over", !!over);
     maybeStreetName(pos);
+    maybeSpeedLimit(pos);
   }
 
   // ---------------- Nearby categories (Overpass POIs) ----------------
