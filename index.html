@@ -12,7 +12,7 @@
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icon-180.png">
   <link rel="stylesheet" href="vendor/maplibre-gl.css">
-  <link rel="stylesheet" href="css/app.css?v=2">
+  <link rel="stylesheet" href="css/app.css?v=4">
 </head>
 <body>
   <div id="map"></div>
@@ -57,8 +57,24 @@
   <!-- Hint bubble -->
   <div id="hint" class="hint">TAP THE MAP TO SET A WAYPOINT</div>
 
+  <!-- Proximity alert (speed camera / police) -->
+  <div id="alert-banner" class="alert-banner hidden">
+    <span id="alert-icon" class="alert-icon"></span>
+    <div class="alert-text">
+      <div id="alert-title" class="alert-title"></div>
+      <div id="alert-sub" class="alert-sub"></div>
+    </div>
+  </div>
+
+  <!-- Police report sheet -->
+  <div id="report-sheet" class="report-sheet hidden">
+    <button id="report-police" class="btn-report-confirm">&#128110; REPORT POLICE HERE</button>
+    <button id="report-cancel" class="btn-report-cancel">CANCEL</button>
+  </div>
+
   <!-- Right-side buttons -->
   <div class="hud-side">
+    <button id="btn-report" class="side-btn btn-report" title="Report police" aria-label="Report police">&#128110;</button>
     <button id="btn-voice" class="side-btn" title="Voice guidance" aria-label="Toggle voice guidance">&#128266;</button>
     <button id="btn-north" class="side-btn" title="Face north" aria-label="Face north">N</button>
     <button id="btn-recenter" class="side-btn" title="Recenter" aria-label="Recenter on my position">&#9678;</button>
@@ -123,7 +139,7 @@
   </script>
   <script src="vendor/maplibre-gl.js"></script>
   <script src="vendor/qrcode.js"></script>
-  <script src="js/gta-style.js?v=3"></script>
-  <script src="js/app.js?v=3"></script>
+  <script src="js/gta-style.js?v=4"></script>
+  <script src="js/app.js?v=4"></script>
 </body>
 </html>

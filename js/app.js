@@ -11,6 +11,13 @@
   var OFF_ROUTE_SECONDS = 6;
   var ARRIVE_METERS = 28;
   var DEMO_SPEED_MPS = 17; // ~38 mph
+  var OVERPASS_URL = "https://overpass-api.de/api/interpreter";
+  // Shared reports backend (Supabase — publishable key, RLS does the protecting)
+  var SUPA_URL = "https://powdosapvcvlrhpcggqz.supabase.co";
+  var SUPA_KEY = "sb_publishable_4QnCoMp5Q86_hYCCGvGU3w_TwRVmNVF";
+  var ALERT_RADIUS_M = 500;          // warn within this distance
+  var ALERT_REWARN_MS = 10 * 60 * 1000; // don't re-warn same spot for 10 min
+  var POLICE_TTL_MS = 4 * 60 * 60 * 1000; // police reports expire after 4 h
 
   var map, playerMarker, waypointMarker;
   var playerPos = null;        // [lng, lat]
@@ -34,6 +41,13 @@
   var voiceOn = true;
   var wakeLock = null;
   var arrived = false;
+
+  var cameras = [], cameraFetchCenter = null, cameraBackoffUntil = 0;
+  var police = [], policeFetchAt = 0;
+  var warnedAt = {};        // alert id -> last warn timestamp
+  var audioCtx = null;
+  var alertHideTimer = null;
+  var alertsReady = false;
 
   var $ = function (id) { return document.getElementById(id); };
 
@@ -252,6 +266,181 @@
     });
   }
 
+  // ---------------- Speed cameras + police alerts ----------------
+  function makeBlipIcon(bg, glyph) {
+    var s = 2, r = 30 * s / 2; // 30px blip at 2x
+    var c = document.createElement("canvas");
+    c.width = 30 * s; c.height = 30 * s;
+    var ctx = c.getContext("2d");
+    ctx.beginPath(); ctx.arc(r, r, 14 * s / 1, 0, Math.PI * 2); ctx.fillStyle = "#17191C"; ctx.fill();
+    ctx.beginPath(); ctx.arc(r, r, 12.5 * s, 0, Math.PI * 2); ctx.fillStyle = "#F5F7F8"; ctx.fill();
+    ctx.beginPath(); ctx.arc(r, r, 11 * s, 0, Math.PI * 2); ctx.fillStyle = bg; ctx.fill();
+    ctx.font = (14 * s) + "px sans-serif";
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(glyph, r, r + s);
+    return ctx.getImageData(0, 0, c.width, c.height);
+  }
+
+  function pointsFC(list) {
+    return { type: "FeatureCollection", features: list.map(function (it) {
+      return { type: "Feature", properties: {}, geometry: { type: "Point", coordinates: it.pos } };
+    }) };
+  }
+
+  function addAlertLayers() {
+    map.addImage("icon-camera", makeBlipIcon("#E8912D", "📷"), { pixelRatio: 2 });
+    map.addImage("icon-police", makeBlipIcon("#3A66A8", "👮"), { pixelRatio: 2 });
+    ["cameras", "police"].forEach(function (name) {
+      map.addSource(name, { type: "geojson", data: pointsFC([]) });
+      map.addLayer({
+        id: name + "-layer",
+        type: "symbol",
+        source: name,
+        minzoom: 9,
+        layout: {
+          "icon-image": name === "cameras" ? "icon-camera" : "icon-police",
+          "icon-size": ["interpolate", ["linear"], ["zoom"], 9, 0.55, 16, 0.95],
+          "icon-allow-overlap": true
+        }
+      });
+    });
+    alertsReady = true;
+  }
+
+  function fetchCameras(center) {
+    var now = Date.now();
+    if (now < cameraBackoffUntil) return;
+    if (cameraFetchCenter && haversine(center, cameraFetchCenter) < 5000) return;
+    cameraFetchCenter = center;
+    var d = 0.15;
+    var bbox = (center[1] - d) + "," + (center[0] - d) + "," + (center[1] + d) + "," + (center[0] + d);
+    var q = '[out:json][timeout:12];node["highway"="speed_camera"](' + bbox + ");out;";
+    fetch(OVERPASS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: "data=" + encodeURIComponent(q)
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        cameras = (data.elements || []).map(function (el) {
+          return { id: "cam" + el.id, pos: [el.lon, el.lat] };
+        });
+        if (map.getSource("cameras")) map.getSource("cameras").setData(pointsFC(cameras));
+      })
+      .catch(function () {
+        cameraFetchCenter = null;
+        cameraBackoffUntil = Date.now() + 60000;
+      });
+  }
+
+  function fetchPolice(center) {
+    if (Date.now() - policeFetchAt < 60000) return;
+    policeFetchAt = Date.now();
+    var since = new Date(Date.now() - POLICE_TTL_MS).toISOString();
+    var d = 0.3;
+    var url = SUPA_URL + "/rest/v1/ls_reports?select=id,lng,lat&kind=eq.police" +
+      "&created_at=gte." + since +
+      "&lat=gte." + (center[1] - d) + "&lat=lte." + (center[1] + d) +
+      "&lng=gte." + (center[0] - d) + "&lng=lte." + (center[0] + d) + "&limit=200";
+    fetch(url, { headers: { apikey: SUPA_KEY, Authorization: "Bearer " + SUPA_KEY } })
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function (rows) {
+        police = rows.map(function (r) { return { id: "pol" + r.id, pos: [r.lng, r.lat] }; });
+        if (map.getSource("police")) map.getSource("police").setData(pointsFC(police));
+      })
+      .catch(function () { /* reports backend offline — pins just don't update */ });
+  }
+
+  function submitPoliceReport() {
+    if (!hasGpsFix || !playerPos) {
+      toast("NEED A GPS FIX TO REPORT", true);
+      return;
+    }
+    fetch(SUPA_URL + "/rest/v1/ls_reports", {
+      method: "POST",
+      headers: {
+        apikey: SUPA_KEY,
+        Authorization: "Bearer " + SUPA_KEY,
+        "Content-Type": "application/json",
+        Prefer: "return=minimal"
+      },
+      body: JSON.stringify({ kind: "police", lng: playerPos[0], lat: playerPos[1] })
+    })
+      .then(function (r) {
+        if (!r.ok) throw new Error(r.status);
+        toast("POLICE REPORTED — DRIVERS NEARBY WILL SEE IT", true);
+        police.push({ id: "local" + Date.now(), pos: playerPos.slice() });
+        if (map.getSource("police")) map.getSource("police").setData(pointsFC(police));
+      })
+      .catch(function () { toast("REPORTS ARE OFFLINE RIGHT NOW"); });
+  }
+
+  function unlockAudio() {
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === "suspended") audioCtx.resume();
+    } catch (e) { /* no audio — beeps just won't play */ }
+  }
+
+  function beepAlert(kind) {
+    try {
+      unlockAudio();
+      if (!audioCtx) return;
+      var n = kind === "camera" ? 2 : 1;
+      var freq = kind === "camera" ? 880 : 620;
+      for (var i = 0; i < n; i++) {
+        var t = audioCtx.currentTime + i * 0.22;
+        var o = audioCtx.createOscillator();
+        var g = audioCtx.createGain();
+        o.type = "sine"; o.frequency.value = freq;
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(0.35, t + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+        o.connect(g); g.connect(audioCtx.destination);
+        o.start(t); o.stop(t + 0.2);
+      }
+    } catch (e) { /* beep is best-effort */ }
+  }
+
+  function showAlertBanner(kind, distM) {
+    var el = $("alert-banner");
+    el.classList.remove("hidden", "alert-camera", "alert-police");
+    el.classList.add(kind === "camera" ? "alert-camera" : "alert-police");
+    $("alert-icon").textContent = kind === "camera" ? "📷" : "👮";
+    $("alert-title").textContent = kind === "camera" ? "SPEED CAMERA AHEAD" : "POLICE REPORTED AHEAD";
+    $("alert-sub").textContent = fmtDist(distM);
+    clearTimeout(alertHideTimer);
+    alertHideTimer = setTimeout(function () { el.classList.add("hidden"); }, 8000);
+  }
+
+  function angleDiff(a, b) {
+    return Math.abs((((a - b) % 360) + 540) % 360 - 180);
+  }
+
+  function checkAlerts(pos, heading) {
+    if (!alertsReady) return;
+    fetchCameras(pos);
+    fetchPolice(pos);
+    var now = Date.now();
+    var lists = [{ items: cameras, kind: "camera" }, { items: police, kind: "police" }];
+    for (var l = 0; l < lists.length; l++) {
+      var items = lists[l].items, kind = lists[l].kind;
+      for (var i = 0; i < items.length; i++) {
+        var it = items[i];
+        var dM = haversine(pos, it.pos);
+        if (dM > ALERT_RADIUS_M) continue;
+        // only warn for things roughly ahead (unless right on top of them)
+        if (typeof heading === "number" && dM > 120 && angleDiff(bearingDeg(pos, it.pos), heading) > 85) continue;
+        if (warnedAt[it.id] && now - warnedAt[it.id] < ALERT_REWARN_MS) continue;
+        warnedAt[it.id] = now;
+        beepAlert(kind);
+        speak(kind === "camera" ? "Speed camera ahead." : "Police reported ahead.");
+        showAlertBanner(kind, dM);
+        return; // one alert at a time
+      }
+    }
+  }
+
   function emptyLine() {
     return { type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: [] } };
   }
@@ -399,6 +588,8 @@
     $("turn-banner").classList.remove("hidden");
     acquireWakeLock();
     speak("Route started.");
+    fetchCameras(demoActive ? route.coords[0] : (playerPos || route.coords[0]));
+    fetchPolice(demoActive ? route.coords[0] : (playerPos || route.coords[0]));
     if (demoActive) {
       // start from the beginning of the route
       demoTraveled = 0;
@@ -447,6 +638,7 @@
     ];
     var heading = bearingDeg(coords[i], coords[i + 1]);
     updateNavigation(pos, heading, DEMO_SPEED_MPS, demoTraveled);
+    checkAlerts(pos, heading);
     if (demoTraveled < total) demoRaf = requestAnimationFrame(demoTick);
   }
 
@@ -588,6 +780,7 @@
       if (navActive && !demoActive) {
         updateNavigation(pos, playerHeading, playerSpeedMps);
       }
+      if (!demoActive) checkAlerts(pos, playerHeading);
     }, function (err) {
       if (!hasGpsFix) toast("GPS UNAVAILABLE — TAP MAP + DEMO DRIVE STILL WORK", true);
     }, { enableHighAccuracy: true, maximumAge: 1000, timeout: 15000 });
@@ -740,10 +933,21 @@
     }), "bottom-left");
 
     window.__lsmap = map; // debug handle
+    window.__lsdebug = { // test hooks for the alert pipeline
+      injectCamera: function (lng, lat) {
+        cameras.push({ id: "dbg-cam" + Date.now(), pos: [lng, lat] });
+        if (map.getSource("cameras")) map.getSource("cameras").setData(pointsFC(cameras));
+      },
+      injectPolice: function (lng, lat) {
+        police.push({ id: "dbg-pol" + Date.now(), pos: [lng, lat] });
+        if (map.getSource("police")) map.getSource("police").setData(pointsFC(police));
+      }
+    };
 
     map.on("load", function () {
       addRouteLayers();
       addRoadShields();
+      addAlertLayers();
       startGps();
       // one-time install hint for iPhone Safari users
       var isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
@@ -786,6 +990,20 @@
       if (!voiceOn && window.speechSynthesis) window.speechSynthesis.cancel();
     });
     $("search").addEventListener("input", onSearchInput);
+
+    $("btn-report").addEventListener("click", function () {
+      $("report-sheet").classList.toggle("hidden");
+    });
+    $("report-police").addEventListener("click", function () {
+      $("report-sheet").classList.add("hidden");
+      submitPoliceReport();
+    });
+    $("report-cancel").addEventListener("click", function () {
+      $("report-sheet").classList.add("hidden");
+    });
+
+    // browsers only allow sound after a first tap — arm the beeper early
+    document.addEventListener("pointerdown", unlockAudio, { once: true });
   }
 
   init();

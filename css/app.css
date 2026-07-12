@@ -291,6 +291,83 @@ html, body { overscroll-behavior: none; }
   text-overflow: ellipsis;
 }
 
+/* ---------- Proximity alerts ---------- */
+.alert-banner {
+  position: absolute;
+  top: calc(150px + env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 86vw;
+  padding: 12px 20px;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  z-index: 30;
+  animation: alertPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes alertPop {
+  from { transform: translateX(-50%) scale(0.8); opacity: 0; }
+  to { transform: translateX(-50%) scale(1); opacity: 1; }
+}
+.alert-banner.alert-camera { border-left: 5px solid #E8912D; }
+.alert-banner.alert-police { border-left: 5px solid #3A66A8; }
+.alert-icon { font-size: 30px; line-height: 1; }
+.alert-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: 1.5px;
+  white-space: nowrap;
+}
+.alert-sub { font-size: 12px; font-weight: 700; color: var(--text-dim); letter-spacing: 1px; }
+
+/* ---------- Police report sheet ---------- */
+.report-sheet {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  display: flex;
+  gap: 10px;
+  padding: 14px;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  z-index: 26;
+}
+.btn-report-confirm {
+  flex: 1;
+  padding: 14px 10px;
+  border: none;
+  border-radius: 10px;
+  background: #3A66A8;
+  color: #fff;
+  font-family: var(--hud-font);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  cursor: pointer;
+  box-shadow: 0 0 16px rgba(58, 102, 168, 0.4);
+}
+.btn-report-cancel {
+  flex: 0 0 auto;
+  padding: 14px 18px;
+  border: none;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.10);
+  color: var(--text-dim);
+  font-family: var(--hud-font);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  cursor: pointer;
+}
+
 /* ---------- Hint ---------- */
 .hint {
   position: absolute;
