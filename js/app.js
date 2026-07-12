@@ -138,23 +138,20 @@
   }
 
   function makeWaypointMarker() {
-    // GTA V-style waypoint blip: four rounded-corner diamond petals around a
-    // ringed center (per operator's reference sprite). Round-join strokes do
-    // the corner rounding; dark pass first, purple pass on top, so the
-    // outline hugs one seamless silhouette.
+    // GTA V-style waypoint blip, per operator's traced outline: a tall pill +
+    // a wide pill crossed, with a large circle in the middle. Stroked pass
+    // first, fill-only pass on top → one seamless outlined silhouette.
     var shapes =
-      '<polygon points="22,6 27,13.5 22,19 17,13.5"/>' +
-      '<polygon points="22,38 27,30.5 22,25 17,30.5"/>' +
-      '<polygon points="38,22 30.5,27 25,22 30.5,17"/>' +
-      '<polygon points="6,22 13.5,27 19,22 13.5,17"/>' +
-      '<circle cx="22" cy="22" r="7"/>';
+      '<rect x="15.5" y="3" width="13" height="38" rx="6.5"/>' +
+      '<rect x="3" y="15.5" width="38" height="13" rx="6.5"/>' +
+      '<circle cx="22" cy="22" r="8.5"/>';
     var el = document.createElement("div");
     el.className = "waypoint-marker";
     el.innerHTML =
       '<div class="waypoint-pulse"></div>' +
       '<svg class="waypoint-blip" viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg">' +
-      '<g fill="none" stroke="#17191C" stroke-width="8.5" stroke-linejoin="round">' + shapes + "</g>" +
-      '<g fill="#8F3FE0" stroke="#8F3FE0" stroke-width="5" stroke-linejoin="round">' + shapes + "</g>" +
+      '<g fill="#8F3FE0" stroke="#17191C" stroke-width="3">' + shapes + "</g>" +
+      '<g fill="#8F3FE0">' + shapes + "</g>" +
       '<circle cx="22" cy="22" r="3.4" fill="#2A1740"/>' +
       "</svg>";
     return new maplibregl.Marker({ element: el, anchor: "center" });
