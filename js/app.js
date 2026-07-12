@@ -285,6 +285,7 @@
     if (!waypointMarker) waypointMarker = makeWaypointMarker();
     waypointMarker.setLngLat(waypointLngLat).addTo(map);
     $("hint").classList.add("hidden");
+    $("pc-bar").classList.add("hidden"); // promo bar yields to the route panel
     speak("Waypoint set.");
     requestRoute();
   }
@@ -601,29 +602,41 @@
     return touch && coarse;
   }
 
-  function showGate() {
-    var gate = $("gate");
-    gate.classList.remove("hidden");
-    var url = location.origin + location.pathname;
-    $("gate-url").textContent = url.replace(/^https?:\/\//, "").replace(/\/$/, "");
-    try {
-      var qr = qrcode(0, "M");
-      qr.addData(url);
-      qr.make();
-      $("gate-qr").innerHTML = qr.createSvgTag({ cellSize: 5, margin: 0 });
-    } catch (e) {
-      $("gate-qr").classList.add("hidden");
-    }
+  // Waze-style desktop companion: full map works with a mouse, plus a promo
+  // bar whose button pops a QR modal for sending the app to a phone.
+  function setupDesktopBar() {
+    var qrBuilt = false;
+    $("pc-bar").classList.remove("hidden");
+    $("btn-send").addEventListener("click", function () {
+      if (!qrBuilt) {
+        qrBuilt = true;
+        var url = location.origin + location.pathname;
+        $("send-url").textContent = url.replace(/^https?:\/\//, "").replace(/\/$/, "");
+        try {
+          var qr = qrcode(0, "M");
+          qr.addData(url);
+          qr.make();
+          $("send-qr").innerHTML = qr.createSvgTag({ cellSize: 5, margin: 0 });
+        } catch (e) {
+          $("send-qr").classList.add("hidden");
+        }
+      }
+      $("send-modal").classList.remove("hidden");
+    });
+    $("send-close").addEventListener("click", function () {
+      $("send-modal").classList.add("hidden");
+    });
+    $("send-modal").addEventListener("click", function (e) {
+      if (e.target === this) this.classList.add("hidden");
+    });
+    $("pc-bar-close").addEventListener("click", function () {
+      $("pc-bar").classList.add("hidden");
+    });
   }
 
   // ---------------- Init ----------------
   function init() {
-    var dev = new URLSearchParams(location.search).get("dev") === "1";
-    if (!dev && !isStandalone() && !isMobileDevice()) {
-      showGate();
-      return; // desktop: gate only, don't boot the map
-    }
-    $("gate").remove();
+    if (!isMobileDevice() && !isStandalone()) setupDesktopBar();
 
     if ("serviceWorker" in navigator &&
         (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {

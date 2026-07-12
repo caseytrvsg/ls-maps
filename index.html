@@ -15,17 +15,26 @@
   <link rel="stylesheet" href="css/app.css">
 </head>
 <body>
-  <!-- Desktop gate: LS Maps is mobile-only -->
-  <div id="gate" class="gate hidden">
-    <div class="logo gate-logo"><span class="logo-ls">LS</span><span class="logo-maps">MAPS</span></div>
-    <div class="gate-title">MOBILE ONLY</div>
-    <div class="gate-sub">GPS navigation built for your phone.</div>
-    <div id="gate-qr" class="gate-qr"></div>
-    <div id="gate-url" class="gate-url"></div>
-    <div class="gate-hint">SCAN WITH YOUR PHONE CAMERA<br>THEN: SHARE &rarr; ADD TO HOME SCREEN</div>
+  <div id="map"></div>
+
+  <!-- Desktop-only: Waze-style promo bar + send-to-phone modal -->
+  <div id="pc-bar" class="pc-bar hidden">
+    <div class="logo pc-bar-logo"><span class="logo-ls">LS</span><span class="logo-maps">MAPS</span></div>
+    <div class="pc-bar-text">GPS NAVIGATION &middot; BUILT FOR YOUR PHONE</div>
+    <button id="btn-send" class="btn-send">SEND TO YOUR PHONE</button>
+    <button id="pc-bar-close" class="pc-bar-x" aria-label="Dismiss">&#10005;</button>
   </div>
 
-  <div id="map"></div>
+  <div id="send-modal" class="modal hidden">
+    <div class="modal-card">
+      <button id="send-close" class="modal-x" aria-label="Close">&#10005;</button>
+      <div class="logo gate-logo"><span class="logo-ls">LS</span><span class="logo-maps">MAPS</span></div>
+      <div class="gate-title">GET IT ON YOUR PHONE</div>
+      <div id="send-qr" class="gate-qr"></div>
+      <div id="send-url" class="gate-url"></div>
+      <div class="gate-hint">SCAN WITH YOUR PHONE CAMERA<br>IPHONE: SHARE &rarr; ADD TO HOME SCREEN<br>ANDROID: TAP INSTALL APP</div>
+    </div>
+  </div>
 
   <!-- Top HUD: logo + search -->
   <header class="hud-top">

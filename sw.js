@@ -2,7 +2,7 @@
 // fallback. Network-first deliberately (ASCEND's cache-first SW served stale
 // pages during updates); offline you get the app shell, though live tiles,
 // routing and search still need a connection.
-var CACHE = "lsmaps-v1";
+var CACHE = "lsmaps-v2";
 var SHELL = [
   ".",
   "index.html",

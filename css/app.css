@@ -33,21 +33,94 @@ html, body {
 button, input { touch-action: manipulation; }
 html, body { overscroll-behavior: none; }
 
-/* ---------- Desktop gate (mobile-only app) ---------- */
-.gate {
+/* ---------- Desktop promo bar (Waze-style) ---------- */
+.pc-bar {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 16px;
+  z-index: 24;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 16px;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+}
+.pc-bar-logo { transform: skewX(-4deg) scale(0.72); margin: -6px -10px; }
+.pc-bar-text {
+  flex: 1;
+  color: var(--text-dim);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.btn-send {
+  padding: 12px 22px;
+  border: none;
+  border-radius: 999px;
+  background: var(--purple);
+  color: #fff;
+  font-family: var(--hud-font);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  cursor: pointer;
+  box-shadow: 0 0 16px rgba(169, 77, 240, 0.4);
+}
+.btn-send:active { background: var(--purple-deep); }
+.pc-bar-x {
+  border: none;
+  background: none;
+  color: var(--text-dim);
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  padding: 6px;
+}
+
+/* ---------- Send-to-phone modal ---------- */
+.modal {
   position: absolute;
   inset: 0;
   z-index: 100;
-  background: #1A1D20;
+  background: rgba(10, 11, 13, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.modal-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
   gap: 14px;
   text-align: center;
-  padding: 24px;
+  padding: 30px 44px;
+  background: var(--panel);
+  border: 1px solid var(--purple);
+  border-radius: 18px;
+  box-shadow: 0 0 40px rgba(169, 77, 240, 0.3);
 }
-.gate-logo { transform: skewX(-4deg) scale(1.4); margin-bottom: 8px; }
+.modal-x {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  border: none;
+  background: none;
+  color: var(--text-dim);
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+  padding: 6px;
+}
+.gate-logo { transform: skewX(-4deg) scale(1.15); margin-bottom: 2px; }
 .gate-title {
   font-family: var(--logo-font);
   font-style: italic;

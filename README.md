@@ -39,12 +39,14 @@ roads, steel-teal water, purple route. No Rockstar assets are used or copied.
 - Voice toggle, north-up button, recenter button
 - Installable as a home-screen app (PWA manifest)
 
-## Mobile-only
+## Phone-first, Waze-style desktop
 
-LS Maps is a phone app. Desktop browsers get a QR gate — scan it with your phone,
-then install via Share → Add to Home Screen (iPhone) or the install prompt (Android).
-`?dev=1` bypasses the gate for desktop testing; `?forceframes=1` unfreezes the map
-engine in embedded browsers that suspend animation frames.
+The phone is the real experience (GPS, voice, install to home screen). Desktop
+browsers get the full map as a companion — mouse navigation, demo drives — plus a
+Waze-style bottom bar with a **SEND TO YOUR PHONE** button that pops a QR code;
+scan it, then install via Share → Add to Home Screen (iPhone) or the install
+prompt (Android). `?forceframes=1` unfreezes the map engine in embedded browsers
+that suspend animation frames.
 
 ## Known limits (v1)
 
