@@ -1219,8 +1219,9 @@
       if (z) return +z[1];
     }
     if (tags.highway === "living_street") return 20;
-    // UK "restricted road": a lit residential/unclassified road defaults to 30 mph
-    if (tags.lit === "yes" && /^(residential|unclassified|tertiary|secondary)$/.test(tags.highway)) return 30;
+    // No explicit limit and no limit-type tag → unknown. We deliberately do NOT
+    // guess from street lighting: many UK areas are now 20 mph, so a "lit road =
+    // 30" guess produces confident-wrong signs. Blank beats wrong.
     return null;
   }
 
