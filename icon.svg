@@ -3,19 +3,19 @@
   <path d="M 96 416 L 200 312 L 280 360 L 416 200" stroke="#33383D" stroke-width="88" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
   <path d="M 96 416 L 200 312 L 280 360 L 416 200" stroke="#EEF1F3" stroke-width="30" stroke-linecap="round" stroke-linejoin="round" fill="none" stroke-dasharray="4 44"/>
   <path d="M 96 416 L 200 312 L 280 360 L 416 176" stroke="#A94DF0" stroke-width="18" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.9"/>
-  <g fill="#8F3FE0" stroke="#0E0F11" stroke-width="11">
-    <circle cx="416" cy="111" r="24"/>
-    <circle cx="416" cy="193" r="24"/>
-    <circle cx="375" cy="152" r="24"/>
-    <circle cx="457" cy="152" r="24"/>
-    <circle cx="416" cy="152" r="29"/>
+  <g fill="none" stroke="#0E0F11" stroke-width="30" stroke-linejoin="round">
+    <polygon points="416,94 434,121 416,141 398,121"/>
+    <polygon points="416,210 434,183 416,163 398,183"/>
+    <polygon points="474,152 447,170 427,152 447,134"/>
+    <polygon points="358,152 385,170 405,152 385,134"/>
+    <circle cx="416" cy="152" r="25"/>
   </g>
-  <g fill="#8F3FE0">
-    <circle cx="416" cy="111" r="24"/>
-    <circle cx="416" cy="193" r="24"/>
-    <circle cx="375" cy="152" r="24"/>
-    <circle cx="457" cy="152" r="24"/>
-    <circle cx="416" cy="152" r="29"/>
+  <g fill="#8F3FE0" stroke="#8F3FE0" stroke-width="18" stroke-linejoin="round">
+    <polygon points="416,94 434,121 416,141 398,121"/>
+    <polygon points="416,210 434,183 416,163 398,183"/>
+    <polygon points="474,152 447,170 427,152 447,134"/>
+    <polygon points="358,152 385,170 405,152 385,134"/>
+    <circle cx="416" cy="152" r="25"/>
   </g>
   <circle cx="416" cy="152" r="12" fill="#2A1740"/>
   <text x="80" y="150" font-family="Impact, 'Arial Black', sans-serif" font-style="italic" font-size="110" fill="#F3C53D" stroke="#000" stroke-width="4">LS</text>
