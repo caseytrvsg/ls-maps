@@ -150,9 +150,12 @@
     el.innerHTML =
       '<div class="waypoint-pulse"></div>' +
       '<svg class="waypoint-blip" viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg">' +
+      '<defs><mask id="wpHole"><rect width="44" height="44" fill="#fff"/><circle cx="22" cy="22" r="6.5" fill="#000"/></mask></defs>' +
+      '<g mask="url(#wpHole)">' +
       '<g fill="#8F3FE0" stroke="#17191C" stroke-width="3">' + shapes + "</g>" +
       '<g fill="#8F3FE0">' + shapes + "</g>" +
-      '<circle cx="22" cy="22" r="4.2" fill="#2A1740"/>' +
+      "</g>" +
+      '<circle cx="22" cy="22" r="6.5" fill="none" stroke="#17191C" stroke-width="2.4"/>' +
       "</svg>";
     return new maplibregl.Marker({ element: el, anchor: "center" });
   }
