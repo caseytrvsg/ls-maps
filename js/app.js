@@ -634,6 +634,27 @@
     });
   }
 
+  // Shown when WebGL is unavailable (e.g. hardware acceleration disabled) —
+  // the one case where the map engine cannot start at all.
+  function showMapError() {
+    $("hint").classList.add("hidden");
+    var div = document.createElement("div");
+    div.className = "map-error";
+    div.innerHTML =
+      '<div class="map-error-card">' +
+      '<div class="gate-title">MAP CAN’T RENDER HERE</div>' +
+      '<div class="map-error-text">This browser has graphics acceleration (WebGL) switched off, ' +
+      "which the map needs. Turn on hardware acceleration in your browser settings — " +
+      "or just use LS Maps on your phone.</div>" +
+      '<button id="map-error-send" class="btn-send">SEND TO YOUR PHONE</button>' +
+      "</div>";
+    document.body.appendChild(div);
+    var sendBtn = $("btn-send");
+    $("map-error-send").addEventListener("click", function () {
+      if (sendBtn) sendBtn.click();
+    });
+  }
+
   // ---------------- Init ----------------
   function init() {
     if (!isMobileDevice() && !isStandalone()) setupDesktopBar();
@@ -642,13 +663,18 @@
         (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
       navigator.serviceWorker.register("sw.js").catch(function () {});
     }
-    map = new maplibregl.Map({
-      container: "map",
-      style: window.GTA_STYLE,
-      center: DEFAULT_CENTER,
-      zoom: 12.5,
-      attributionControl: false
-    });
+    try {
+      map = new maplibregl.Map({
+        container: "map",
+        style: window.GTA_STYLE,
+        center: DEFAULT_CENTER,
+        zoom: 12.5,
+        attributionControl: false
+      });
+    } catch (e) {
+      showMapError();
+      return;
+    }
     map.addControl(new maplibregl.AttributionControl({
       compact: true,
       customAttribution: "&copy; OpenStreetMap contributors &middot; OpenFreeMap &middot; OSRM"
