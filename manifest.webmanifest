@@ -1,7 +1,7 @@
 {
-  "name": "LS Maps",
-  "short_name": "LS Maps",
-  "description": "Turn-by-turn navigation with a GTA-inspired look.",
+  "name": "Waypoint",
+  "short_name": "Waypoint",
+  "description": "Waypoint — turn-by-turn navigation with a GTA-inspired look.",
   "start_url": ".",
   "display": "standalone",
   "orientation": "portrait",

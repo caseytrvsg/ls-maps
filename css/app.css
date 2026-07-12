@@ -192,14 +192,14 @@ html, body { overscroll-behavior: none; }
   flex: 0 0 auto;
 }
 .logo-ls {
-  font-size: 26px;
+  font-size: 22px;
   color: #F3C53D;
   text-shadow: 2px 2px 0 #000;
 }
 .logo-maps {
-  font-size: 26px;
+  font-size: 22px;
   color: #fff;
-  margin-left: 4px;
+  margin-left: 3px;
   text-shadow: 2px 2px 0 #000;
 }
 
@@ -800,7 +800,7 @@ body.nav-on .hud-side { bottom: calc(120px + env(safe-area-inset-bottom)); }
 body.nav-on .report-fab { bottom: calc(120px + env(safe-area-inset-bottom)); right: 76px; }
 
 @media (max-width: 420px) {
-  .logo-ls, .logo-maps { font-size: 21px; }
+  .logo-ls, .logo-maps { font-size: 17px; }
   .turn-arrow { font-size: 32px; }
   .turn-dist { font-size: 18px; }
 }

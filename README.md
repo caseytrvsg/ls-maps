@@ -1,4 +1,4 @@
-# LS Maps
+# Waypoint
 
 Turn-by-turn navigation web app with a GTA-inspired look — dark Los Santos-style map,
 purple waypoint blip, purple GPS route line, voice directions.

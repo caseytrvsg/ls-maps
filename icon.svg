@@ -14,5 +14,5 @@
     <circle cx="416" cy="152" r="30.5"/>
   </g>
   <circle cx="416" cy="152" r="12" fill="#2A1740"/>
-  <text x="80" y="150" font-family="Impact, 'Arial Black', sans-serif" font-style="italic" font-size="110" fill="#F3C53D" stroke="#000" stroke-width="4">LS</text>
+  <text x="72" y="156" font-family="Impact, 'Arial Black', sans-serif" font-style="italic" font-size="112" fill="#F3C53D" stroke="#000" stroke-width="4">W</text>
 </svg>
