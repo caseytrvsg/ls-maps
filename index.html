@@ -13,14 +13,14 @@
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icon-180.png">
   <link rel="stylesheet" href="vendor/maplibre-gl.css">
-  <link rel="stylesheet" href="css/app.css?v=7">
+  <link rel="stylesheet" href="css/app.css?v=8">
 </head>
 <body>
   <div id="map"></div>
 
   <!-- Desktop-only: Waze-style promo bar + send-to-phone modal -->
   <div id="pc-bar" class="pc-bar hidden">
-    <div class="logo pc-bar-logo"><span class="logo-ls">WAY</span><span class="logo-maps">POINT</span></div>
+    <div class="logo pc-bar-logo"><svg class="logo-mark" viewBox="0 0 44 44" aria-hidden="true"><rect width="44" height="44" rx="10" fill="#0E0F11"/><path d="M8 36 L18 26 L24 30 L34 16" stroke="#33383D" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="M8 36 L18 26 L24 30 L34 16" stroke="#A868E8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" stroke-dasharray="1 5"/><g fill="#8F3FE0" stroke="#17191C" stroke-width="1.6"><rect x="30.5" y="4" width="7" height="20" rx="3.5"/><rect x="24" y="10.5" width="20" height="7" rx="3.5"/><circle cx="34" cy="14" r="5"/></g><circle cx="34" cy="14" r="1.8" fill="#2A1740"/></svg><span class="logo-ls">WAY</span><span class="logo-maps">POINT</span></div>
     <div class="pc-bar-text">GPS NAVIGATION &middot; BUILT FOR YOUR PHONE</div>
     <button id="btn-send" class="btn-send">SEND TO YOUR PHONE</button>
     <button id="pc-bar-close" class="pc-bar-x" aria-label="Dismiss">&#10005;</button>
@@ -29,7 +29,7 @@
   <div id="send-modal" class="modal hidden">
     <div class="modal-card">
       <button id="send-close" class="modal-x" aria-label="Close">&#10005;</button>
-      <div class="logo gate-logo"><span class="logo-ls">WAY</span><span class="logo-maps">POINT</span></div>
+      <div class="logo gate-logo"><svg class="logo-mark" viewBox="0 0 44 44" aria-hidden="true"><rect width="44" height="44" rx="10" fill="#0E0F11"/><path d="M8 36 L18 26 L24 30 L34 16" stroke="#33383D" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="M8 36 L18 26 L24 30 L34 16" stroke="#A868E8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" stroke-dasharray="1 5"/><g fill="#8F3FE0" stroke="#17191C" stroke-width="1.6"><rect x="30.5" y="4" width="7" height="20" rx="3.5"/><rect x="24" y="10.5" width="20" height="7" rx="3.5"/><circle cx="34" cy="14" r="5"/></g><circle cx="34" cy="14" r="1.8" fill="#2A1740"/></svg><span class="logo-ls">WAY</span><span class="logo-maps">POINT</span></div>
       <div class="gate-title">GET IT ON YOUR PHONE</div>
       <div id="send-qr" class="gate-qr"></div>
       <div id="send-url" class="gate-url"></div>
@@ -39,7 +39,7 @@
 
   <!-- Top HUD: logo chip -->
   <header class="hud-top">
-    <div class="logo" aria-hidden="true"><span class="logo-ls">WAY</span><span class="logo-maps">POINT</span></div>
+    <div class="logo" aria-hidden="true"><svg class="logo-mark" viewBox="0 0 44 44" aria-hidden="true"><rect width="44" height="44" rx="10" fill="#0E0F11"/><path d="M8 36 L18 26 L24 30 L34 16" stroke="#33383D" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="M8 36 L18 26 L24 30 L34 16" stroke="#A868E8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" stroke-dasharray="1 5"/><g fill="#8F3FE0" stroke="#17191C" stroke-width="1.6"><rect x="30.5" y="4" width="7" height="20" rx="3.5"/><rect x="24" y="10.5" width="20" height="7" rx="3.5"/><circle cx="34" cy="14" r="5"/></g><circle cx="34" cy="14" r="1.8" fill="#2A1740"/></svg><span class="logo-ls">WAY</span><span class="logo-maps">POINT</span></div>
   </header>
 
   <!-- Waze-style bottom sheet: search, shortcuts, recents -->
