@@ -15,6 +15,10 @@
   // Shared reports backend (Supabase — publishable key, RLS does the protecting)
   var SUPA_URL = "https://powdosapvcvlrhpcggqz.supabase.co";
   var SUPA_KEY = "sb_publishable_4QnCoMp5Q86_hYCCGvGU3w_TwRVmNVF";
+  // TomTom — live traffic (rate-limited public key, not a secret)
+  var TOMTOM_KEY = "D6R8XYf9jmjbFIr4o1Nt3lhEWNuDfY9n";
+  var TOMTOM_INCIDENTS = "https://api.tomtom.com/traffic/services/5/incidentDetails";
+  var TOMTOM_ROUTE = "https://api.tomtom.com/routing/1/calculateRoute/";
   var ALERT_RADIUS_M = 500;          // warn within this distance
   var ALERT_REWARN_MS = 10 * 60 * 1000; // don't re-warn same spot for 10 min
   var POLICE_TTL_MS = 4 * 60 * 60 * 1000; // police reports expire after 4 h
@@ -46,6 +50,8 @@
 
   var cameras = [], cameraFetchCenter = null, cameraBackoffUntil = 0;
   var police = [], policeFetchAt = 0;
+  var incidents = [], incidentFetchCenter = null, incidentBackoffUntil = 0;
+  var trafficOn = true;
   var warnedAt = {};        // alert id -> last warn timestamp
   var audioCtx = null;
   var alertHideTimer = null;
@@ -309,6 +315,94 @@
     alertsReady = true;
   }
 
+  // ---------------- Live traffic (TomTom) ----------------
+  // TomTom incident iconCategory → how we treat it. Only discrete incidents get
+  // pins + alerts; plain jams are covered by the colored flow overlay.
+  var INCIDENT_CATS = {
+    1:  { glyph: "💥", title: "ACCIDENT AHEAD", alert: true },
+    3:  { glyph: "⚠️", title: "HAZARD AHEAD", alert: true },
+    5:  { glyph: "🧊", title: "ICE ON ROAD AHEAD", alert: true },
+    7:  { glyph: "🚧", title: "LANE CLOSED AHEAD", alert: true },
+    8:  { glyph: "⛔", title: "ROAD CLOSED AHEAD", alert: true },
+    9:  { glyph: "🚧", title: "ROADWORKS AHEAD", alert: true },
+    11: { glyph: "🌊", title: "FLOODING AHEAD", alert: true },
+    14: { glyph: "🚗", title: "BROKEN-DOWN VEHICLE AHEAD", alert: true }
+  };
+
+  function addTrafficLayers() {
+    // Congestion flow tiles draped over the map (green→red), toggled by the button.
+    map.addSource("tomtom-flow", {
+      type: "raster",
+      tiles: ["https://api.tomtom.com/traffic/map/4/tile/flow/relative0/{z}/{x}/{y}.png?key=" + TOMTOM_KEY],
+      tileSize: 256,
+      maxzoom: 22
+    });
+    var beforeId = map.getLayer("road-name") ? "road-name" : undefined;
+    map.addLayer({
+      id: "tomtom-flow-layer",
+      type: "raster",
+      source: "tomtom-flow",
+      paint: { "raster-opacity": 0.55 }
+    }, beforeId);
+
+    map.addImage("icon-incident", makeBlipIcon("#E5544B", "⚠"), { pixelRatio: 2 });
+    map.addSource("incidents", { type: "geojson", data: pointsFC([]) });
+    map.addLayer({
+      id: "incidents-layer",
+      type: "symbol",
+      source: "incidents",
+      minzoom: 8,
+      layout: {
+        "icon-image": "icon-incident",
+        "icon-size": ["interpolate", ["linear"], ["zoom"], 8, 0.5, 16, 0.95],
+        "icon-allow-overlap": true
+      }
+    });
+  }
+
+  function setTraffic(on) {
+    trafficOn = on;
+    var vis = on ? "visible" : "none";
+    if (map.getLayer("tomtom-flow-layer")) map.setLayoutProperty("tomtom-flow-layer", "visibility", vis);
+    if (map.getLayer("incidents-layer")) map.setLayoutProperty("incidents-layer", "visibility", vis);
+    var btn = $("btn-traffic");
+    if (btn) btn.classList.toggle("off", !on);
+  }
+
+  function fetchIncidents(center) {
+    var now = Date.now();
+    if (now < incidentBackoffUntil) return;
+    if (incidentFetchCenter && haversine(center, incidentFetchCenter) < 4000) return;
+    incidentFetchCenter = center;
+    var d = 0.12;
+    var bbox = (center[0] - d) + "," + (center[1] - d) + "," + (center[0] + d) + "," + (center[1] + d);
+    var fields = encodeURIComponent("{incidents{type,geometry{type,coordinates},properties{iconCategory,magnitudeOfDelay}}}");
+    var url = TOMTOM_INCIDENTS + "?bbox=" + bbox + "&fields=" + fields +
+      "&language=en-GB&timeValidityFilter=present&key=" + TOMTOM_KEY;
+    fetch(url)
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function (data) {
+        incidents = [];
+        (data.incidents || []).forEach(function (f, idx) {
+          var cat = f.properties && f.properties.iconCategory;
+          var meta = INCIDENT_CATS[cat];
+          if (!meta) return; // skip jams/weather-only — overlay handles those
+          var g = f.geometry || {};
+          var pos = null;
+          if (g.type === "Point") pos = g.coordinates;
+          else if (g.type === "LineString" && g.coordinates.length) pos = g.coordinates[Math.floor(g.coordinates.length / 2)];
+          if (!pos) return;
+          incidents.push({ id: "inc" + idx + "_" + Math.round(pos[0] * 1e4) + "_" + Math.round(pos[1] * 1e4),
+            pos: pos, kind: "incident", title: meta.title, glyph: meta.glyph });
+        });
+        if (map.getSource("incidents")) map.getSource("incidents").setData(pointsFC(incidents));
+      })
+      .catch(function () {
+        incidentFetchCenter = null;
+        incidentBackoffUntil = Date.now() + 120000; // back off 2 min on error
+      });
+  }
+
   function fetchCameras(center) {
     var now = Date.now();
     if (now < cameraBackoffUntil) return;
@@ -404,12 +498,16 @@
     } catch (e) { /* beep is best-effort */ }
   }
 
-  function showAlertBanner(kind, distM) {
+  function showAlertBanner(kind, distM, item) {
     var el = $("alert-banner");
-    el.classList.remove("hidden", "alert-camera", "alert-police");
-    el.classList.add(kind === "camera" ? "alert-camera" : "alert-police");
-    $("alert-icon").textContent = kind === "camera" ? "📷" : "👮";
-    $("alert-title").textContent = kind === "camera" ? "SPEED CAMERA AHEAD" : "POLICE REPORTED AHEAD";
+    el.classList.remove("hidden", "alert-camera", "alert-police", "alert-incident");
+    var glyph, title, cls;
+    if (kind === "camera") { glyph = "📷"; title = "SPEED CAMERA AHEAD"; cls = "alert-camera"; }
+    else if (kind === "police") { glyph = "👮"; title = "POLICE REPORTED AHEAD"; cls = "alert-police"; }
+    else { glyph = (item && item.glyph) || "⚠️"; title = (item && item.title) || "INCIDENT AHEAD"; cls = "alert-incident"; }
+    el.classList.add(cls);
+    $("alert-icon").textContent = glyph;
+    $("alert-title").textContent = title;
     $("alert-sub").textContent = fmtDist(distM);
     clearTimeout(alertHideTimer);
     alertHideTimer = setTimeout(function () { el.classList.add("hidden"); }, 8000);
@@ -419,12 +517,25 @@
     return Math.abs((((a - b) % 360) + 540) % 360 - 180);
   }
 
+  function spokenFor(kind, item) {
+    if (kind === "camera") return "Speed camera ahead.";
+    if (kind === "police") return "Police reported ahead.";
+    // strip trailing "AHEAD" then re-add, lowercased, for natural speech
+    var t = (item && item.title) || "Incident ahead";
+    return t.charAt(0) + t.slice(1).toLowerCase() + ".";
+  }
+
   function checkAlerts(pos, heading) {
     if (!alertsReady) return;
     fetchCameras(pos);
     fetchPolice(pos);
+    fetchIncidents(pos);
     var now = Date.now();
-    var lists = [{ items: cameras, kind: "camera" }, { items: police, kind: "police" }];
+    var lists = [
+      { items: cameras, kind: "camera" },
+      { items: police, kind: "police" },
+      { items: incidents, kind: "incident" }
+    ];
     for (var l = 0; l < lists.length; l++) {
       var items = lists[l].items, kind = lists[l].kind;
       for (var i = 0; i < items.length; i++) {
@@ -435,9 +546,9 @@
         if (typeof heading === "number" && dM > 120 && angleDiff(bearingDeg(pos, it.pos), heading) > 85) continue;
         if (warnedAt[it.id] && now - warnedAt[it.id] < ALERT_REWARN_MS) continue;
         warnedAt[it.id] = now;
-        beepAlert(kind);
-        speak(kind === "camera" ? "Speed camera ahead." : "Police reported ahead.");
-        showAlertBanner(kind, dM);
+        beepAlert(kind === "camera" ? "camera" : "police");
+        speak(spokenFor(kind, it));
+        showAlertBanner(kind, dM, it);
         return; // one alert at a time
       }
     }
@@ -490,6 +601,41 @@
         });
       })
       .catch(function (err) { cb(err); });
+  }
+
+  // TomTom traffic-aware travel time + current delay for the same OD pair.
+  function fetchTrafficETA(from, to, cb) {
+    var url = TOMTOM_ROUTE + from[1] + "," + from[0] + ":" + to[1] + "," + to[0] +
+      "/json?traffic=true&travelMode=car&key=" + TOMTOM_KEY;
+    fetch(url)
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function (data) {
+        var s = data.routes && data.routes[0] && data.routes[0].summary;
+        if (!s) throw new Error("no summary");
+        cb(null, { travelSec: s.travelTimeInSeconds, delaySec: s.trafficDelayInSeconds || 0 });
+      })
+      .catch(function (e) { cb(e); });
+  }
+
+  function applyTrafficETA(origin) {
+    if (!waypointLngLat) return;
+    fetchTrafficETA(origin, waypointLngLat, function (err, t) {
+      if (err || !route) return;
+      // adopt TomTom's traffic-aware time; keep OSRM geometry/steps
+      route.totalDur = t.travelSec;
+      route.trafficDelaySec = t.delaySec;
+      var badge = $("route-traffic");
+      if (t.delaySec >= 60) {
+        var mins = Math.round(t.delaySec / 60);
+        badge.textContent = "+" + mins + " MIN TRAFFIC";
+        badge.classList.remove("hidden");
+      } else {
+        badge.textContent = "CLEAR";
+        badge.classList.remove("hidden");
+        badge.classList.add("clear");
+      }
+      if (!navActive) $("route-time").textContent = fmtDuration(route.totalDur);
+    });
   }
 
   function arrowFor(step) {
@@ -593,6 +739,9 @@
       setRouteGeometry(r.coords);
       $("route-time").textContent = fmtDuration(r.totalDur);
       $("route-dist").textContent = fmtDist(r.totalDist).toLowerCase().toUpperCase();
+      $("route-traffic").classList.add("hidden");
+      $("route-traffic").classList.remove("clear");
+      applyTrafficETA(origin); // enrich ETA with live traffic delay
       if (!navActive) {
         $("route-panel").classList.remove("hidden");
         $("nav-bar").classList.add("hidden");
@@ -1169,14 +1318,23 @@
       injectPolice: function (lng, lat) {
         police.push({ id: "dbg-pol" + Date.now(), pos: [lng, lat] });
         if (map.getSource("police")) map.getSource("police").setData(pointsFC(police));
-      }
+      },
+      injectIncident: function (lng, lat, title, glyph) {
+        incidents.push({ id: "dbg-inc" + Date.now(), pos: [lng, lat], kind: "incident",
+          title: title || "ACCIDENT AHEAD", glyph: glyph || "💥" });
+        if (map.getSource("incidents")) map.getSource("incidents").setData(pointsFC(incidents));
+      },
+      trafficState: function () { return { trafficOn: trafficOn, incidents: incidents.length }; }
     };
 
     map.on("load", function () {
       addRouteLayers();
       addRoadShields();
       addAlertLayers();
+      addTrafficLayers();
       startGps();
+      // seed traffic where the map opens so overlay + incidents show pre-GPS
+      fetchIncidents(map.getCenter().toArray());
       // one-time install hint for iPhone Safari users
       var isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
       if (isIos && !isStandalone() && !localStorage.getItem("lsmaps-install-hint")) {
@@ -1211,6 +1369,10 @@
     $("btn-north").addEventListener("click", function () {
       following = false;
       map.easeTo({ bearing: 0, pitch: 0, duration: 500 });
+    });
+    $("btn-traffic").addEventListener("click", function () {
+      setTraffic(!trafficOn);
+      toast(trafficOn ? "LIVE TRAFFIC ON" : "LIVE TRAFFIC OFF", true);
     });
     $("btn-voice").addEventListener("click", function () {
       voiceOn = !voiceOn;

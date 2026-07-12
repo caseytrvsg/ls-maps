@@ -13,7 +13,7 @@
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icon-180.png">
   <link rel="stylesheet" href="vendor/maplibre-gl.css">
-  <link rel="stylesheet" href="css/app.css?v=9">
+  <link rel="stylesheet" href="css/app.css?v=10">
 </head>
 <body>
   <div id="map"></div>
@@ -93,6 +93,7 @@
 
   <!-- Right-side buttons -->
   <div class="hud-side">
+    <button id="btn-traffic" class="side-btn" title="Toggle live traffic" aria-label="Toggle live traffic">&#128678;</button>
     <button id="btn-voice" class="side-btn" title="Voice guidance" aria-label="Toggle voice guidance">&#128266;</button>
     <button id="btn-north" class="side-btn" title="Face north" aria-label="Face north">N</button>
     <button id="btn-recenter" class="side-btn" title="Recenter" aria-label="Recenter on my position">&#9678;</button>
@@ -115,6 +116,7 @@
     <div class="route-stats">
       <span id="route-time" class="route-time">--</span>
       <span id="route-dist" class="route-dist">--</span>
+      <span id="route-traffic" class="route-traffic hidden"></span>
     </div>
     <div class="route-actions">
       <button id="btn-go" class="btn-go">START ROUTE</button>
@@ -169,7 +171,7 @@
   </script>
   <script src="vendor/maplibre-gl.js"></script>
   <script src="vendor/qrcode.js"></script>
-  <script src="js/gta-style.js?v=5"></script>
-  <script src="js/app.js?v=6"></script>
+  <script src="js/gta-style.js?v=10"></script>
+  <script src="js/app.js?v=10"></script>
 </body>
 </html>

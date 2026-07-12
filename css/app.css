@@ -410,6 +410,7 @@ body.nav-on .hud-top { display: none; }
 }
 .alert-banner.alert-camera { border-left: 5px solid #E8912D; }
 .alert-banner.alert-police { border-left: 5px solid #3A66A8; }
+.alert-banner.alert-incident { border-left: 5px solid #E5544B; }
 .alert-icon { font-size: 30px; line-height: 1; }
 .alert-title {
   font-size: 15px;
@@ -613,6 +614,20 @@ body.nav-on .hud-top { display: none; }
   font-weight: 700;
   color: var(--text-dim);
   letter-spacing: 1px;
+}
+.route-traffic {
+  margin-left: auto;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(229, 84, 75, 0.18);
+  color: #F0857D;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+.route-traffic.clear {
+  background: rgba(109, 211, 109, 0.16);
+  color: var(--money-green);
 }
 .route-actions { display: flex; gap: 10px; }
 .btn-go, .btn-demo {
