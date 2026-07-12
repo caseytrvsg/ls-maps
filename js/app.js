@@ -138,20 +138,23 @@
   }
 
   function makeWaypointMarker() {
-    // GTA V-style waypoint blip: purple four-pointed star with a ringed center
+    // GTA V-style waypoint blip: purple clover — four rounded lobes around a
+    // ringed center. Two passes (stroked, then fill-only) so the outline hugs
+    // the outer silhouette with no seam lines where the lobes overlap.
+    var lobes =
+      '<circle cx="22" cy="10.5" r="6.8"/>' +
+      '<circle cx="22" cy="33.5" r="6.8"/>' +
+      '<circle cx="10.5" cy="22" r="6.8"/>' +
+      '<circle cx="33.5" cy="22" r="6.8"/>' +
+      '<circle cx="22" cy="22" r="8"/>';
     var el = document.createElement("div");
     el.className = "waypoint-marker";
     el.innerHTML =
       '<div class="waypoint-pulse"></div>' +
       '<svg class="waypoint-blip" viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg">' +
-      '<g stroke="#17191C" stroke-width="2" stroke-linejoin="round">' +
-      '<polygon points="22,2 27,13 22,18 17,13" fill="#8F3FE0"/>' +
-      '<polygon points="22,42 27,31 22,26 17,31" fill="#8F3FE0"/>' +
-      '<polygon points="42,22 31,27 26,22 31,17" fill="#8F3FE0"/>' +
-      '<polygon points="2,22 13,27 18,22 13,17" fill="#8F3FE0"/>' +
-      '<circle cx="22" cy="22" r="7" fill="#8F3FE0" stroke-width="2.2"/>' +
-      '</g>' +
-      '<circle cx="22" cy="22" r="3" fill="#2A1740"/>' +
+      '<g fill="#8F3FE0" stroke="#17191C" stroke-width="3">' + lobes + "</g>" +
+      '<g fill="#8F3FE0">' + lobes + "</g>" +
+      '<circle cx="22" cy="22" r="3.2" fill="#2A1740"/>' +
       "</svg>";
     return new maplibregl.Marker({ element: el, anchor: "center" });
   }
