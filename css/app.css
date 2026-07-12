@@ -253,6 +253,76 @@ html, body { overscroll-behavior: none; }
 }
 .sheet-results { margin-top: 4px; }
 
+/* Category preset chips */
+.cat-presets { display: flex; gap: 8px; margin-top: 8px; overflow-x: auto; scrollbar-width: none; }
+.cat-presets::-webkit-scrollbar { display: none; }
+.cat-chip {
+  flex: 0 0 auto;
+  padding: 10px 15px;
+  border-radius: 999px;
+  background: rgba(169, 77, 240, 0.14);
+  border: 1px solid rgba(169, 77, 240, 0.35);
+  color: var(--text);
+  font-family: var(--hud-font);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.cat-chip:active { background: rgba(169, 77, 240, 0.3); }
+.cat-chip.cat-more { background: rgba(255, 255, 255, 0.08); border-color: var(--panel-border); }
+
+/* Results header (category name + back) */
+.results-head { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
+.results-back {
+  border: none; background: rgba(255,255,255,0.08); color: var(--text);
+  width: 30px; height: 30px; border-radius: 50%; font-size: 18px; font-weight: 800; cursor: pointer;
+}
+#results-title { font-size: 12px; font-weight: 800; letter-spacing: 2px; color: var(--text); }
+
+/* Place result rows */
+.place-item { display: flex; align-items: center; gap: 10px; }
+.place-main { flex: 1; min-width: 0; }
+.place-meta { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+.st-open, .st-closed, .st-price {
+  font-size: 11px; font-weight: 800; letter-spacing: 0.5px;
+  padding: 3px 8px; border-radius: 6px; white-space: nowrap;
+}
+.st-open { background: rgba(109, 211, 109, 0.16); color: var(--money-green); }
+.st-closed { background: rgba(229, 84, 75, 0.16); color: #F0857D; }
+.st-price { background: rgba(243, 197, 61, 0.16); color: #F3C53D; }
+.place-loading { padding: 18px 4px; color: var(--text-dim); font-size: 13px; font-weight: 700; letter-spacing: 1px; }
+
+/* Full category screen */
+.cat-screen {
+  position: absolute; inset: 0; z-index: 60;
+  background: #1A1D20;
+  display: flex; flex-direction: column;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.cat-screen-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: calc(12px + env(safe-area-inset-top)) 14px 12px;
+  border-bottom: 1px solid var(--panel-border);
+}
+.cat-screen-title { font-size: 15px; font-weight: 800; letter-spacing: 2px; color: var(--text); }
+.cat-screen-btn {
+  border: none; background: none; color: var(--text);
+  width: 38px; height: 38px; font-size: 20px; font-weight: 800; cursor: pointer;
+}
+.cat-screen-list { flex: 1; overflow-y: auto; }
+.cat-row {
+  display: flex; align-items: center; gap: 16px;
+  padding: 18px 18px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  cursor: pointer;
+}
+.cat-row:active { background: rgba(169, 77, 240, 0.12); }
+.cat-row-glyph { font-size: 24px; width: 30px; text-align: center; }
+.cat-row-label { flex: 1; font-size: 16px; font-weight: 600; color: var(--text); letter-spacing: 0.5px; }
+.cat-row-arrow { color: var(--text-dim); font-size: 20px; }
+
 /* ---------- Free-drive HUD ---------- */
 .speed-bubble {
   position: absolute;

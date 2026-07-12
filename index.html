@@ -13,7 +13,7 @@
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icon-180.png">
   <link rel="stylesheet" href="vendor/maplibre-gl.css">
-  <link rel="stylesheet" href="css/app.css?v=10">
+  <link rel="stylesheet" href="css/app.css?v=11">
 </head>
 <body>
   <div id="map"></div>
@@ -52,8 +52,29 @@
       <button class="chip" id="chip-home">&#127968; SET HOME</button>
       <button class="chip" id="chip-work">&#128188; SET WORK</button>
     </div>
+    <div class="cat-presets" id="cat-presets">
+      <button class="cat-chip" data-cat="fuel">&#9981; FUEL</button>
+      <button class="cat-chip" data-cat="food">&#127860; FOOD</button>
+      <button class="cat-chip" data-cat="parking">&#128658; PARKING</button>
+      <button class="cat-chip" data-cat="groceries">&#128722; GROCERIES</button>
+      <button class="cat-chip cat-more" id="cat-more-btn">&#8943; MORE</button>
+    </div>
+    <div class="results-head hidden" id="results-head">
+      <button id="results-back" class="results-back" aria-label="Back">&#8249;</button>
+      <span id="results-title">RESULTS</span>
+    </div>
     <div id="recents-label" class="recents-label hidden">RECENT</div>
     <div id="search-results" class="sheet-results"></div>
+  </div>
+
+  <!-- Full category screen (opened from MORE) -->
+  <div id="cat-screen" class="cat-screen hidden">
+    <div class="cat-screen-head">
+      <button id="cat-screen-back" class="cat-screen-btn" aria-label="Back">&#8249;</button>
+      <span class="cat-screen-title">CATEGORIES</span>
+      <button id="cat-screen-close" class="cat-screen-btn" aria-label="Close">&#10005;</button>
+    </div>
+    <div id="cat-screen-list" class="cat-screen-list"></div>
   </div>
 
   <!-- Free-drive HUD: speed bubble, current street, report FAB -->
@@ -171,7 +192,7 @@
   </script>
   <script src="vendor/maplibre-gl.js"></script>
   <script src="vendor/qrcode.js"></script>
-  <script src="js/gta-style.js?v=10"></script>
-  <script src="js/app.js?v=10"></script>
+  <script src="js/gta-style.js?v=11"></script>
+  <script src="js/app.js?v=11"></script>
 </body>
 </html>

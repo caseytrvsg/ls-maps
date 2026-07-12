@@ -1116,6 +1116,8 @@
   function renderRecents() {
     var box = $("search-results");
     box.innerHTML = "";
+    var head = $("results-head");
+    if (head) head.classList.add("hidden");
     var rec = getRecents();
     $("recents-label").classList.toggle("hidden", !rec.length);
     rec.forEach(function (r) {
@@ -1161,6 +1163,7 @@
     var q = $("search").value.trim();
     clearTimeout(searchTimer);
     if (q.length) openSheet(true);
+    if (q.length) $("results-head").classList.add("hidden");
     if (q.length < 3) { renderRecents(); return; }
     searchTimer = setTimeout(function () {
       var center = map.getCenter();
@@ -1212,6 +1215,204 @@
     }
     maybeStreetName(pos);
   }
+
+  // ---------------- Nearby categories (Overpass POIs) ----------------
+  var CATEGORIES = [
+    { key: "fuel",       label: "Fuel",        glyph: "⛽", sel: ['node["amenity"="fuel"]', 'way["amenity"="fuel"]'], radius: 6000, fuel: true },
+    { key: "food",       label: "Food",        glyph: "🍴", sel: ['node["amenity"~"restaurant|fast_food"]', 'way["amenity"~"restaurant|fast_food"]'], radius: 4000 },
+    { key: "parking",    label: "Parking",     glyph: "🅿️", sel: ['node["amenity"="parking"]["access"!="private"]', 'way["amenity"="parking"]["access"!="private"]'], radius: 3000 },
+    { key: "groceries",  label: "Groceries",   glyph: "🛒", sel: ['node["shop"~"supermarket|convenience"]', 'way["shop"~"supermarket|convenience"]'], radius: 4000 },
+    { key: "coffee",     label: "Coffee",      glyph: "☕", sel: ['node["amenity"="cafe"]', 'way["amenity"="cafe"]'], radius: 4000 },
+    { key: "shopping",   label: "Shopping",    glyph: "🛍️", sel: ['node["shop"~"mall|department_store"]', 'way["shop"~"mall|department_store"]'], radius: 7000 },
+    { key: "pharmacies", label: "Pharmacies",  glyph: "💊", sel: ['node["amenity"="pharmacy"]', 'way["amenity"="pharmacy"]'], radius: 5000 },
+    { key: "ev",         label: "EV charging", glyph: "🔌", sel: ['node["amenity"="charging_station"]', 'way["amenity"="charging_station"]'], radius: 7000 },
+    { key: "hospitals",  label: "Hospitals",   glyph: "🏥", sel: ['node["amenity"="hospital"]', 'way["amenity"="hospital"]'], radius: 12000 },
+    { key: "hotels",     label: "Hotels",      glyph: "🏨", sel: ['node["tourism"="hotel"]', 'way["tourism"="hotel"]'], radius: 8000 },
+    { key: "parks",      label: "Parks",       glyph: "🌳", sel: ['node["leisure"="park"]', 'way["leisure"="park"]'], radius: 5000 },
+    { key: "crisis",     label: "Crisis",      glyph: "🆘", sel: ['node["amenity"~"police|hospital|fire_station"]', 'way["amenity"~"police|hospital|fire_station"]'], radius: 14000 }
+  ];
+  function catByKey(k) { for (var i = 0; i < CATEGORIES.length; i++) if (CATEGORIES[i].key === k) return CATEGORIES[i]; return null; }
+
+  var DOW = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
+  function expandDays(sel) {
+    var out = [];
+    sel.split(",").forEach(function (part) {
+      part = part.trim();
+      var range = part.split("-");
+      if (range.length === 2) {
+        var a = DOW.indexOf(range[0]), b = DOW.indexOf(range[1]);
+        if (a >= 0 && b >= 0) for (var i = a; i !== (b + 1) % 7; i = (i + 1) % 7) out.push(i);
+      } else {
+        var d = DOW.indexOf(part); if (d >= 0) out.push(d);
+      }
+    });
+    return out;
+  }
+  // Pragmatic OSM opening_hours evaluator → 'open' | 'closed' | 'unknown'
+  function parseOpenState(oh) {
+    if (!oh) return "unknown";
+    oh = oh.trim();
+    if (/24\s*\/\s*7/.test(oh) || /00:00-24:00/.test(oh) && !/;/.test(oh) && !/Mo|Tu|We|Th|Fr|Sa|Su/.test(oh)) return "open";
+    var now = new Date();
+    var today = now.getDay() === 0 ? 6 : now.getDay() - 1; // Mo=0..Su=6
+    var mins = now.getHours() * 60 + now.getMinutes();
+    var rules = oh.split(";");
+    var parseable = false, openNow = false;
+    for (var r = 0; r < rules.length; r++) {
+      var rule = rules[r].trim();
+      if (!rule || /PH|SH|easter|week|sunset|sunrise/i.test(rule)) continue;
+      var mDays = rule.match(/^((?:Mo|Tu|We|Th|Fr|Sa|Su)(?:\s*[-,]\s*(?:Mo|Tu|We|Th|Fr|Sa|Su))*)/);
+      var days = null, rest = rule;
+      if (mDays) { days = expandDays(mDays[1]); rest = rule.slice(mDays[1].length).trim(); }
+      if (days && days.indexOf(today) < 0) continue; // rule not for today
+      if (/off|closed/i.test(rest)) { parseable = true; continue; }
+      var times = rest.match(/\d{1,2}:\d{2}\s*-\s*\d{1,2}:\d{2}/g);
+      if (!times) continue;
+      parseable = true;
+      for (var t = 0; t < times.length; t++) {
+        var mm = times[t].match(/(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/);
+        var start = +mm[1] * 60 + +mm[2], end = +mm[3] * 60 + +mm[4];
+        if (end === 0) end = 1440;
+        var inRange = end > start ? (mins >= start && mins < end) : (mins >= start || mins < end);
+        if (inRange) openNow = true;
+      }
+    }
+    if (openNow) return "open";
+    return parseable ? "closed" : "unknown";
+  }
+
+  var catFetchToken = 0;
+  var fuelPrices = null, fuelPricesTried = false;
+
+  function loadFuelPrices() {
+    // Prices are generated server-side by a GitHub Action into data/fuel_prices.json
+    // (the UK CMA retailer feeds block direct browser access via CORS).
+    if (fuelPricesTried) return Promise.resolve(fuelPrices);
+    fuelPricesTried = true;
+    return fetch("data/fuel_prices.json")
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function (j) { fuelPrices = j.stations || []; return fuelPrices; })
+      .catch(function () { fuelPrices = null; return null; });
+  }
+
+  function matchFuelPrice(pos) {
+    if (!fuelPrices) return null;
+    var best = null, bestD = 250; // within 250 m of the OSM station
+    for (var i = 0; i < fuelPrices.length; i++) {
+      var s = fuelPrices[i];
+      if (typeof s.lat !== "number" || typeof s.lng !== "number") continue;
+      var d = haversine(pos, [s.lng, s.lat]);
+      if (d < bestD) { bestD = d; best = s; }
+    }
+    if (!best || !best.e10) return null;
+    return "£" + (best.e10 / 100).toFixed(2); // pence → pounds/litre, unleaded E10
+  }
+
+  function goToPlace(pos, name) {
+    chipAssign = null;
+    closeCatScreen();
+    $("search").value = "";
+    map.easeTo({ center: pos, zoom: 14, duration: 700 });
+    setWaypoint(pos, name);
+  }
+
+  function placeRow(p) {
+    var div = document.createElement("div");
+    div.className = "search-item place-item";
+    var badge = p.status === "open" ? '<span class="st-open">OPEN</span>'
+      : p.status === "closed" ? '<span class="st-closed">CLOSED</span>' : "";
+    var price = p.price ? '<span class="st-price">' + escapeHtml(p.price) + "</span>" : "";
+    div.innerHTML =
+      '<div class="place-main"><div class="primary">' + p.glyph + " " + escapeHtml(p.name) + "</div>" +
+      '<div class="secondary">' + fmtDist(p.dist) + "</div></div>" +
+      '<div class="place-meta">' + price + badge + "</div>";
+    div.addEventListener("click", function () { goToPlace(p.pos, p.name); });
+    return div;
+  }
+
+  function showResultsHeader(cat) {
+    $("recents-label").classList.add("hidden");
+    var head = $("results-head");
+    head.classList.remove("hidden");
+    $("results-title").textContent = cat.glyph + " " + cat.label.toUpperCase() + " NEAR YOU";
+  }
+
+  function runCategory(catKey) {
+    var cat = catByKey(catKey);
+    if (!cat) return;
+    closeCatScreen();
+    openSheet(true);
+    showResultsHeader(cat);
+    var box = $("search-results");
+    box.innerHTML = '<div class="place-loading">Finding ' + cat.label.toLowerCase() + " near you…</div>";
+    var center = playerPos || map.getCenter().toArray();
+    var token = ++catFetchToken;
+    var around = cat.sel.map(function (s) { return s + "(around:" + cat.radius + "," + center[1] + "," + center[0] + ");"; }).join("");
+    var q = "[out:json][timeout:20];(" + around + ");out center 40;";
+    var pricesReady = cat.fuel ? loadFuelPrices() : Promise.resolve(null);
+    fetch(OVERPASS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: "data=" + encodeURIComponent(q)
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (data) { return pricesReady.then(function () { return data; }); })
+      .then(function (data) {
+        if (token !== catFetchToken) return; // superseded by a newer category tap
+        var places = [];
+        (data.elements || []).forEach(function (el) {
+          var t = el.tags || {};
+          var pos = el.type === "node" ? [el.lon, el.lat] : (el.center ? [el.center.lon, el.center.lat] : null);
+          if (!pos) return;
+          var name = t.name || t.brand || t.operator || cat.label;
+          places.push({
+            name: name, pos: pos, glyph: cat.glyph,
+            dist: haversine(center, pos),
+            status: parseOpenState(t.opening_hours),
+            price: cat.fuel ? matchFuelPrice(pos) : null
+          });
+        });
+        // de-dupe by name+rounded position, sort by distance, cap at 20
+        var seen = {}, uniq = [];
+        places.sort(function (a, b) { return a.dist - b.dist; });
+        places.forEach(function (p) {
+          var k = p.name + "@" + Math.round(p.pos[0] * 1e4) + "," + Math.round(p.pos[1] * 1e4);
+          if (seen[k]) return; seen[k] = 1; uniq.push(p);
+        });
+        uniq = uniq.slice(0, 20);
+        box.innerHTML = "";
+        if (!uniq.length) { box.innerHTML = '<div class="place-loading">Nothing found nearby.</div>'; return; }
+        uniq.forEach(function (p) { box.appendChild(placeRow(p)); });
+      })
+      .catch(function () {
+        if (token !== catFetchToken) return;
+        box.innerHTML = '<div class="place-loading">Couldn’t load places — try again.</div>';
+      });
+  }
+
+  function exitCategoryResults() {
+    $("results-head").classList.add("hidden");
+    renderRecents();
+  }
+
+  function buildCatScreen() {
+    var list = $("cat-screen-list");
+    list.innerHTML = "";
+    CATEGORIES.forEach(function (cat) {
+      var row = document.createElement("div");
+      row.className = "cat-row";
+      row.innerHTML = '<span class="cat-row-glyph">' + cat.glyph + "</span>" +
+        '<span class="cat-row-label">' + cat.label + "</span>" +
+        '<span class="cat-row-arrow">›</span>';
+      row.addEventListener("click", function () { runCategory(cat.key); });
+      list.appendChild(row);
+    });
+  }
+  function openCatScreen() {
+    if (!$("cat-screen-list").children.length) buildCatScreen();
+    $("cat-screen").classList.remove("hidden");
+  }
+  function closeCatScreen() { $("cat-screen").classList.add("hidden"); }
 
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, function (c) {
@@ -1393,6 +1594,16 @@
     });
     refreshChips();
     renderRecents();
+
+    // category presets + full category screen
+    var presets = document.querySelectorAll("#cat-presets .cat-chip[data-cat]");
+    Array.prototype.forEach.call(presets, function (btn) {
+      btn.addEventListener("click", function () { runCategory(btn.getAttribute("data-cat")); });
+    });
+    $("cat-more-btn").addEventListener("click", openCatScreen);
+    $("cat-screen-back").addEventListener("click", closeCatScreen);
+    $("cat-screen-close").addEventListener("click", closeCatScreen);
+    $("results-back").addEventListener("click", exitCategoryResults);
 
     attachDirSearch("from-input", true);
     attachDirSearch("to-input", false);
