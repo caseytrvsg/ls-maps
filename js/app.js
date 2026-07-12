@@ -897,7 +897,7 @@
     updateNavigation(pos, heading, DEMO_SPEED_MPS, demoTraveled);
     checkAlerts(pos, heading);
     maybeStreetName(pos);
-    maybeSpeedLimit(pos);
+    maybeSpeedLimit(pos, heading);
     if (demoTraveled < total) demoRaf = requestAnimationFrame(demoTick);
   }
 
@@ -1205,13 +1205,34 @@
     return null;
   }
 
-  function nearestWayDist(pos, geom) {
-    var best = Infinity;
-    for (var i = 0; i < geom.length - 1; i++) {
-      var pr = projectToSegment(pos, [geom[i].lon, geom[i].lat], [geom[i + 1].lon, geom[i + 1].lat]);
-      if (pr.dist < best) best = pr.dist;
+  // Resolve a road's limit even without an explicit maxspeed tag:
+  // maxspeed → maxspeed:type/source (GB zones + national limits) → lit-road rule.
+  function inferLimitMph(tags) {
+    var explicit = parseMaxspeedMph(tags.maxspeed);
+    if (explicit) return explicit;
+    var type = ((tags["maxspeed:type"] || tags["source:maxspeed"]) || "").toLowerCase();
+    if (type) {
+      if (type.indexOf("nsl_dual") >= 0 || type.indexOf("motorway") >= 0) return 70;
+      if (type.indexOf("nsl_single") >= 0) return 60;
+      if (type.indexOf("nsl_restricted") >= 0 || type.indexOf("urban") >= 0) return 30;
+      var z = type.match(/zone:?(\d+)/); // GB 20/30 zones are already mph
+      if (z) return +z[1];
     }
-    if (geom.length === 1) best = haversine(pos, [geom[0].lon, geom[0].lat]);
+    if (tags.highway === "living_street") return 20;
+    // UK "restricted road": a lit residential/unclassified road defaults to 30 mph
+    if (tags.lit === "yes" && /^(residential|unclassified|tertiary|secondary)$/.test(tags.highway)) return 30;
+    return null;
+  }
+
+  // Nearest point on a road's polyline + that segment's bearing (for heading match).
+  function nearestWayInfo(pos, geom) {
+    var best = { dist: Infinity, bearing: null };
+    for (var i = 0; i < geom.length - 1; i++) {
+      var a = [geom[i].lon, geom[i].lat], b = [geom[i + 1].lon, geom[i + 1].lat];
+      var pr = projectToSegment(pos, a, b);
+      if (pr.dist < best.dist) { best.dist = pr.dist; best.bearing = bearingDeg(a, b); }
+    }
+    if (geom.length === 1) best.dist = haversine(pos, [geom[0].lon, geom[0].lat]);
     return best;
   }
 
@@ -1222,13 +1243,15 @@
     else { sign.classList.add("hidden"); }
   }
 
-  function maybeSpeedLimit(pos) {
+  function maybeSpeedLimit(pos, heading) {
     var now = Date.now();
-    if (now - limitFetchAt < 8000) return;
-    if (limitFetchPos && haversine(pos, limitFetchPos) < 45) return;
+    if (now - limitFetchAt < 6000) return;
+    if (limitFetchPos && haversine(pos, limitFetchPos) < 30) return; // re-check sooner after a turn
     limitFetchAt = now;
     limitFetchPos = pos.slice();
-    var q = "[out:json][timeout:10];way(around:40," + pos[1] + "," + pos[0] + ")[highway][maxspeed];out tags geom 20;";
+    // all drivable roads nearby (with the tags needed to infer a limit), not just tagged ones
+    var q = "[out:json][timeout:10];way(around:40," + pos[1] + "," + pos[0] +
+      ')[highway~"^(motorway|trunk|primary|secondary|tertiary|unclassified|residential|living_street|motorway_link|trunk_link|primary_link|secondary_link|tertiary_link)$"];out tags geom 30;';
     fetch(OVERPASS_URL, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -1236,13 +1259,24 @@
     })
       .then(function (r) { return r.json(); })
       .then(function (data) {
-        var best = null, bestD = 42;
+        var best = null, bestScore = Infinity;
         (data.elements || []).forEach(function (w) {
-          if (!w.geometry || !w.tags || !w.tags.maxspeed) return;
-          var d = nearestWayDist(pos, w.geometry);
-          if (d < bestD) { bestD = d; best = w.tags.maxspeed; }
+          if (!w.geometry || !w.tags) return;
+          var mph = inferLimitMph(w.tags);
+          if (!mph) return;
+          var info = nearestWayInfo(pos, w.geometry);
+          if (info.dist > 42) return;
+          var score = info.dist;
+          // penalise roads whose direction disagrees with travel (junctions, parallels)
+          if (typeof heading === "number" && info.bearing != null) {
+            var d = Math.abs(((info.bearing - heading) % 360 + 360) % 360);
+            if (d > 180) d = 360 - d;
+            if (d > 90) d = 180 - d; // roads are bidirectional → 0..90
+            score += (d / 90) * 18;
+          }
+          if (score < bestScore) { bestScore = score; best = mph; }
         });
-        setLimitSign(best ? parseMaxspeedMph(best) : null);
+        setLimitSign(best);
       })
       .catch(function () { /* keep last known limit */ });
   }
@@ -1276,7 +1310,7 @@
     var over = currentLimitMph && mph > currentLimitMph + 5;
     $("speed-val").classList.toggle("over", !!over);
     maybeStreetName(pos);
-    maybeSpeedLimit(pos);
+    maybeSpeedLimit(pos, playerHeading);
   }
 
   // ---------------- Nearby categories (Overpass POIs) ----------------
