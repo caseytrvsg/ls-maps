@@ -138,17 +138,22 @@
   }
 
   function makeWaypointMarker() {
+    // GTA V-style waypoint blip: purple four-pointed star with a ringed center
     var el = document.createElement("div");
     el.className = "waypoint-marker";
     el.innerHTML =
       '<div class="waypoint-pulse"></div>' +
-      '<div class="waypoint-pin">' +
-      '<svg viewBox="0 0 30 38" xmlns="http://www.w3.org/2000/svg">' +
-      '<path d="M15 1 C7 1 1.5 6.8 1.5 14 C1.5 24 15 37 15 37 C15 37 28.5 24 28.5 14 C28.5 6.8 23 1 15 1 Z" ' +
-      'fill="#A94DF0" stroke="#17191C" stroke-width="2"/>' +
-      '<circle cx="15" cy="14" r="5.5" fill="#FFFFFF" stroke="#17191C" stroke-width="1.5"/>' +
-      "</svg></div>";
-    return new maplibregl.Marker({ element: el, anchor: "bottom" });
+      '<svg class="waypoint-blip" viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg">' +
+      '<g stroke="#17191C" stroke-width="2" stroke-linejoin="round">' +
+      '<polygon points="22,2 27,13 22,18 17,13" fill="#8F3FE0"/>' +
+      '<polygon points="22,42 27,31 22,26 17,31" fill="#8F3FE0"/>' +
+      '<polygon points="42,22 31,27 26,22 31,17" fill="#8F3FE0"/>' +
+      '<polygon points="2,22 13,27 18,22 13,17" fill="#8F3FE0"/>' +
+      '<circle cx="22" cy="22" r="7" fill="#8F3FE0" stroke-width="2.2"/>' +
+      '</g>' +
+      '<circle cx="22" cy="22" r="3" fill="#2A1740"/>' +
+      "</svg>";
+    return new maplibregl.Marker({ element: el, anchor: "center" });
   }
 
   // ---------------- Route layers ----------------
@@ -160,7 +165,7 @@
       source: "route",
       layout: { "line-cap": "round", "line-join": "round" },
       paint: {
-        "line-color": "#A94DF0",
+        "line-color": "#A868E8",
         "line-opacity": 0.25,
         "line-width": ["interpolate", ["exponential", 1.4], ["zoom"], 10, 8, 16, 20, 19, 34]
       }
@@ -171,7 +176,7 @@
       source: "route",
       layout: { "line-cap": "round", "line-join": "round" },
       paint: {
-        "line-color": "#4A1A75",
+        "line-color": "#5A2B94",
         "line-width": ["interpolate", ["exponential", 1.4], ["zoom"], 10, 5, 16, 11, 19, 20]
       }
     });
@@ -181,7 +186,7 @@
       source: "route",
       layout: { "line-cap": "round", "line-join": "round" },
       paint: {
-        "line-color": "#A94DF0",
+        "line-color": "#A868E8",
         "line-width": ["interpolate", ["exponential", 1.4], ["zoom"], 10, 3, 16, 7, 19, 13]
       }
     });

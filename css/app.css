@@ -376,31 +376,24 @@ html, body {
 }
 .player-marker svg { display: block; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.8)); }
 
-/* Waypoint — purple GTA-style blip with pulsing ring */
-.waypoint-marker { position: relative; width: 40px; height: 52px; pointer-events: none; }
-.waypoint-pin {
+/* Waypoint — GTA V-style purple four-pointed blip with radar pulse */
+.waypoint-marker { position: relative; width: 44px; height: 44px; pointer-events: none; }
+.waypoint-blip {
   position: absolute;
-  left: 50%;
-  bottom: 10px;
-  transform: translateX(-50%);
-  width: 30px;
-  height: 38px;
+  inset: 0;
+  display: block;
+  filter: drop-shadow(0 2px 5px rgba(0,0,0,0.7));
 }
-.waypoint-pin svg { display: block; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.7)); }
 .waypoint-pulse {
   position: absolute;
-  left: 50%;
-  bottom: 2px;
-  transform: translateX(-50%);
-  width: 26px;
-  height: 12px;
+  inset: 0;
   border-radius: 50%;
   border: 2px solid var(--purple);
   animation: wpPulse 1.6s ease-out infinite;
 }
 @keyframes wpPulse {
-  0% { opacity: 0.9; transform: translateX(-50%) scale(0.5); }
-  100% { opacity: 0; transform: translateX(-50%) scale(1.7); }
+  0% { opacity: 0.9; transform: scale(0.45); }
+  100% { opacity: 0; transform: scale(1.7); }
 }
 
 /* MapLibre chrome adjustments */
