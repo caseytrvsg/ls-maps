@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>LS Maps</title>
+  <meta name="description" content="Turn-by-turn navigation with a GTA-inspired look.">
+  <meta name="theme-color" content="#1A1D20">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="vendor/maplibre-gl.css">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <div id="map"></div>
+
+  <!-- Top HUD: logo + search -->
+  <header class="hud-top">
+    <div class="logo" aria-hidden="true"><span class="logo-ls">LS</span><span class="logo-maps">MAPS</span></div>
+    <div class="search-wrap">
+      <input id="search" type="text" autocomplete="off" spellcheck="false" placeholder="SEARCH DESTINATION" aria-label="Search destination">
+      <div id="search-results" class="search-results hidden"></div>
+    </div>
+  </header>
+
+  <!-- Turn-by-turn banner (hidden until navigating) -->
+  <div id="turn-banner" class="turn-banner hidden">
+    <div id="turn-arrow" class="turn-arrow">&#8593;</div>
+    <div class="turn-text">
+      <div id="turn-dist" class="turn-dist">0 FT</div>
+      <div id="turn-street" class="turn-street">&nbsp;</div>
+    </div>
+  </div>
+
+  <!-- Hint bubble -->
+  <div id="hint" class="hint">TAP THE MAP TO SET A WAYPOINT</div>
+
+  <!-- Right-side buttons -->
+  <div class="hud-side">
+    <button id="btn-voice" class="side-btn" title="Voice guidance" aria-label="Toggle voice guidance">&#128266;</button>
+    <button id="btn-north" class="side-btn" title="Face north" aria-label="Face north">N</button>
+    <button id="btn-recenter" class="side-btn" title="Recenter" aria-label="Recenter on my position">&#9678;</button>
+  </div>
+
+  <!-- Route summary panel (appears after waypoint is set) -->
+  <div id="route-panel" class="route-panel hidden">
+    <div class="route-stats">
+      <span id="route-time" class="route-time">--</span>
+      <span id="route-dist" class="route-dist">--</span>
+    </div>
+    <div class="route-actions">
+      <button id="btn-go" class="btn-go">START ROUTE</button>
+      <button id="btn-demo" class="btn-demo" title="Simulated drive along the route">DEMO DRIVE</button>
+      <button id="btn-cancel" class="btn-cancel" aria-label="Cancel route">&#10005;</button>
+    </div>
+  </div>
+
+  <!-- Bottom nav bar (during navigation) -->
+  <div id="nav-bar" class="nav-bar hidden">
+    <div class="nav-cell">
+      <div id="nav-eta" class="nav-big eta-green">--:--</div>
+      <div class="nav-label">ETA</div>
+    </div>
+    <div class="nav-cell">
+      <div id="nav-remaining" class="nav-big">-- MI</div>
+      <div class="nav-label">LEFT</div>
+    </div>
+    <div class="nav-cell">
+      <div id="nav-speed" class="nav-big">0</div>
+      <div class="nav-label">MPH</div>
+    </div>
+    <button id="btn-end" class="btn-end">END</button>
+  </div>
+
+  <!-- Arrival splash -->
+  <div id="arrive" class="arrive hidden">
+    <div class="arrive-inner">
+      <div class="arrive-title">YOU HAVE ARRIVED</div>
+      <div class="arrive-sub">~ destination reached ~</div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script>
+    // Debug fallback: some embedded/headless browsers freeze requestAnimationFrame,
+    // which stalls the map engine. ?forceframes=1 races rAF against a timer so
+    // frames keep advancing. No effect without the query param.
+    if (new URLSearchParams(location.search).get("forceframes") === "1") {
+      (function () {
+        var realRaf = window.requestAnimationFrame.bind(window);
+        window.requestAnimationFrame = function (cb) {
+          var done = false;
+          function run(ts) { if (done) return; done = true; cb(ts); }
+          realRaf(run);
+          setTimeout(function () { run(performance.now()); }, 60);
+          return 0;
+        };
+      })();
+    }
+  </script>
+  <script src="vendor/maplibre-gl.js"></script>
+  <script src="js/gta-style.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
